@@ -62,6 +62,22 @@ class RecordingManager:
         """Return the metadata sidecar path for a recording filename."""
         return self.settings.recordings_dir / f"{self.recording_stem(filename)}.json"
 
+    def _legacy_metadata_path_for(self, filename: str) -> Path:
+        """Return the legacy sidecar path used before stem-based metadata files."""
+        return self.settings.recordings_dir / f"{filename}.json"
+
+    def resolve_metadata_path(self, filename: str) -> Path:
+        """Resolve the metadata sidecar for either current or legacy recording naming."""
+        self._validate_recording_filename(filename)
+        candidates = (
+            self.metadata_path_for(filename),
+            self._legacy_metadata_path_for(filename),
+        )
+        for candidate in candidates:
+            if candidate.is_file():
+                return candidate
+        raise RecordingManagerError("Recording metadata not found.")
+
     def report_path_for(self, filename: str) -> Path:
         """Return the markdown report path for a recording filename."""
         return self.settings.recordings_dir / f"{self.recording_stem(filename)}.md"
@@ -130,6 +146,7 @@ class RecordingManager:
             "display_name": display_name,
             "report_filename": self.report_filename_for(filename),
             "deep_analysis_filename": self.deep_analysis_filename_for(filename),
+            "favorite": False,
             "recording_path": str(recording_path),
         }
         if metadata is not None:
@@ -157,36 +174,40 @@ class RecordingManager:
                 recording_path = str(payload.get("recording_path") or "").strip()
                 if not recording_path:
                     continue
-                summaries.append(
-                    RecordingSummary(
-                        call_sid=str(payload.get("call_sid") or ""),
-                        recording_sid=str(payload.get("recording_sid") or ""),
-                        saved_at=str(payload.get("saved_at") or ""),
-                        filename=str(payload.get("filename") or Path(recording_path).name),
-                        display_name=str(payload.get("display_name") or Path(recording_path).stem),
-                        media_url=str(payload.get("media_url") or "") or None,
-                        report_filename=self.report_filename_for(str(payload.get("filename") or Path(recording_path).name)),
-                        report_available=self.report_path_for(
-                            str(payload.get("filename") or Path(recording_path).name)
-                        ).is_file(),
-                        deep_analysis_filename=self.deep_analysis_filename_for(
-                            str(payload.get("filename") or Path(recording_path).name)
-                        ),
-                        deep_analysis_available=self.deep_analysis_path_for(
-                            str(payload.get("filename") or Path(recording_path).name)
-                        ).is_file(),
-                        recording_path=recording_path,
-                    )
-                )
+                summaries.append(self._summary_from_payload(payload))
             except (OSError, json.JSONDecodeError, ValueError):
                 self.logger.warning("recording_sidecar_parse_failed", path=str(sidecar_path))
-        summaries.sort(key=lambda item: item.saved_at, reverse=True)
+        summaries.sort(key=lambda item: (item.favorite, item.saved_at), reverse=True)
         return summaries[:limit]
+
+    def update_favorite(self, filename: str, favorite: bool | None = None) -> RecordingSummary:
+        """Persist favorite status for a recording and return the updated summary."""
+        sidecar_path = self.resolve_metadata_path(filename)
+        try:
+            payload = json.loads(sidecar_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise RecordingManagerError("Recording metadata could not be read.") from exc
+
+        current = bool(payload.get("favorite", False))
+        payload["favorite"] = (not current) if favorite is None else bool(favorite)
+        if not payload.get("filename"):
+            payload["filename"] = filename
+
+        try:
+            sidecar_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+        except OSError as exc:
+            raise RecordingManagerError("Recording metadata could not be updated.") from exc
+
+        self.logger.info(
+            "recording_favorite_updated",
+            filename=filename,
+            favorite=payload["favorite"],
+        )
+        return self._summary_from_payload(payload)
 
     def resolve_recording_path(self, filename: str) -> Path:
         """Resolve a dashboard recording filename inside the recordings directory."""
-        if not filename or filename in {".", ".."} or "/" in filename:
-            raise RecordingManagerError("Invalid recording filename.")
+        self._validate_recording_filename(filename)
         candidate = (self.settings.recordings_dir / filename).resolve()
         recordings_root = self.settings.recordings_dir.resolve()
         if recordings_root not in candidate.parents or not candidate.is_file():
@@ -195,8 +216,7 @@ class RecordingManager:
 
     def resolve_report_path(self, filename: str) -> Path:
         """Resolve the markdown report associated with a dashboard recording filename."""
-        if not filename or filename in {".", ".."} or "/" in filename:
-            raise RecordingManagerError("Invalid recording filename.")
+        self._validate_recording_filename(filename)
         candidate = self.report_path_for(filename).resolve()
         recordings_root = self.settings.recordings_dir.resolve()
         if recordings_root not in candidate.parents or not candidate.is_file():
@@ -205,10 +225,31 @@ class RecordingManager:
 
     def resolve_deep_analysis_path(self, filename: str) -> Path:
         """Resolve the deep-analysis markdown associated with a dashboard recording filename."""
-        if not filename or filename in {".", ".."} or "/" in filename:
-            raise RecordingManagerError("Invalid recording filename.")
+        self._validate_recording_filename(filename)
         candidate = self.deep_analysis_path_for(filename).resolve()
         recordings_root = self.settings.recordings_dir.resolve()
         if recordings_root not in candidate.parents or not candidate.is_file():
             raise RecordingManagerError("Recording deep analysis not found.")
         return candidate
+
+    def _validate_recording_filename(self, filename: str) -> None:
+        if not filename or filename in {".", ".."} or "/" in filename:
+            raise RecordingManagerError("Invalid recording filename.")
+
+    def _summary_from_payload(self, payload: dict[str, Any]) -> RecordingSummary:
+        recording_path = str(payload.get("recording_path") or "").strip()
+        filename = str(payload.get("filename") or Path(recording_path).name)
+        return RecordingSummary(
+            call_sid=str(payload.get("call_sid") or ""),
+            recording_sid=str(payload.get("recording_sid") or ""),
+            saved_at=str(payload.get("saved_at") or ""),
+            filename=filename,
+            display_name=str(payload.get("display_name") or Path(recording_path).stem),
+            media_url=str(payload.get("media_url") or "") or None,
+            report_filename=self.report_filename_for(filename),
+            report_available=self.report_path_for(filename).is_file(),
+            deep_analysis_filename=self.deep_analysis_filename_for(filename),
+            deep_analysis_available=self.deep_analysis_path_for(filename).is_file(),
+            favorite=bool(payload.get("favorite", False)),
+            recording_path=recording_path,
+        )

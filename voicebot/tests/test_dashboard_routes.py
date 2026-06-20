@@ -40,6 +40,9 @@ class FakeCallManager:
 
 
 class FakeRecordingManager:
+    def __init__(self) -> None:
+        self.favorite = False
+
     def list_recordings(self):
         return [
             RecordingSummary(
@@ -52,9 +55,14 @@ class FakeRecordingManager:
                 report_available=True,
                 deep_analysis_filename="call.deep-analysis.md",
                 deep_analysis_available=True,
+                favorite=self.favorite,
                 recording_path="/tmp/call.mp3",
             )
         ]
+
+    def update_favorite(self, filename: str, favorite: bool | None = None):
+        self.favorite = (not self.favorite) if favorite is None else bool(favorite)
+        return self.list_recordings()[0]
 
     def resolve_report_path(self, filename: str):
         from pathlib import Path
@@ -214,3 +222,25 @@ def test_recording_deep_analysis_route_returns_markdown(settings) -> None:
 
     assert response.status_code == 200
     assert "# deep analysis" in response.text
+
+
+def test_recording_favorite_route_updates_recording(settings) -> None:
+    event_bus = DashboardEventBus()
+    app = FastAPI()
+    recordings = FakeRecordingManager()
+    app.include_router(
+        build_dashboard_router(
+            settings,
+            FakeCallManager(),
+            event_bus,
+            recordings,
+            TestCampaignManager(settings),
+        )
+    )
+    client = TestClient(app)
+
+    response = client.post("/api/recordings/call.mp3/favorite", json={"favorite": True})
+
+    assert response.status_code == 200
+    assert response.json()["ok"] is True
+    assert response.json()["recording"]["favorite"] is True

@@ -164,6 +164,93 @@ def test_campaign_manager_builds_current_scenario_only_instruction(settings) -> 
     assert activated.scenario_ids[1] not in instruction
     assert "If the representative says you need a support representative" in instruction
     assert "Do not switch to a different question" in instruction
+    assert "Treat the current scenario as context and intent" in instruction
+    assert "Always respond to the representative's latest direct question" in instruction
+    assert "do not repeat the same big sentence again" in instruction
+    assert "provide one detail at a time" in instruction
+    assert "do not keep pushing just to make the scenario pass" in instruction
+
+
+def test_campaign_manager_does_not_advance_on_brief_acknowledgement(settings) -> None:
+    settings.testing_max_scenarios_per_call = 2
+    settings.testing_max_scenarios_per_category = 1
+    manager = TestCampaignManager(settings, rng=random.Random(7))
+
+    run, custom_parameters = manager.plan_next_call()
+    metadata = CallMetadata(
+        call_sid="CA_ACK",
+        to_number="+15555550124",
+        from_number="+15555550123",
+        stream_url="wss://example.test/ws/twilio-media",
+        custom_parameters=custom_parameters,
+    )
+    activated = manager.activate_run(metadata)
+    assert activated is not None
+
+    session = SessionState.from_metadata(metadata)
+    first_scenario = manager._resolved_scenarios_for_run(activated)[0]
+    session.append_transcript_turn("agent", first_scenario.ask[0])
+    assert manager.process_live_turns(session) is None
+
+    session.append_transcript_turn("user", "Okay, let me check that for you.")
+    assert manager.process_live_turns(session) is None
+    assert manager._active_runs["CA_ACK"].active_scenario_index == 0
+
+
+def test_campaign_manager_advances_on_clear_failed_response(settings) -> None:
+    settings.testing_max_scenarios_per_call = 2
+    settings.testing_max_scenarios_per_category = 1
+    manager = TestCampaignManager(settings, rng=random.Random(7))
+
+    run, custom_parameters = manager.plan_next_call()
+    metadata = CallMetadata(
+        call_sid="CA_FAILFAST",
+        to_number="+15555550124",
+        from_number="+15555550123",
+        stream_url="wss://example.test/ws/twilio-media",
+        custom_parameters=custom_parameters,
+    )
+    activated = manager.activate_run(metadata)
+    assert activated is not None
+
+    session = SessionState.from_metadata(metadata)
+    first_scenario = manager._resolved_scenarios_for_run(activated)[0]
+    session.append_transcript_turn("agent", first_scenario.ask[0])
+    assert manager.process_live_turns(session) is None
+
+    session.append_transcript_turn("user", "I can't help with that here. You need a support representative.")
+    nudge = manager.process_live_turns(session)
+
+    assert nudge is not None
+    assert manager._active_runs["CA_FAILFAST"].active_scenario_index == 1
+
+
+def test_campaign_manager_advances_on_pretty_good_ai_response(settings) -> None:
+    settings.testing_max_scenarios_per_call = 2
+    settings.testing_max_scenarios_per_category = 1
+    manager = TestCampaignManager(settings, rng=random.Random(7))
+
+    run, custom_parameters = manager.plan_next_call()
+    metadata = CallMetadata(
+        call_sid="CA_AI",
+        to_number="+15555550124",
+        from_number="+15555550123",
+        stream_url="wss://example.test/ws/twilio-media",
+        custom_parameters=custom_parameters,
+    )
+    activated = manager.activate_run(metadata)
+    assert activated is not None
+
+    session = SessionState.from_metadata(metadata)
+    first_scenario = manager._resolved_scenarios_for_run(activated)[0]
+    session.append_transcript_turn("agent", first_scenario.ask[0])
+    assert manager.process_live_turns(session) is None
+
+    session.append_transcript_turn("user", "I am a pretty good AI, but I cannot help with that.")
+    nudge = manager.process_live_turns(session)
+
+    assert nudge is not None
+    assert manager._active_runs["CA_AI"].active_scenario_index == 1
 
 
 def test_campaign_manager_reset_clears_coverage_but_keeps_history(settings) -> None:

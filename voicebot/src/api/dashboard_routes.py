@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
 from voicebot.src.config.settings import Settings
+from voicebot.src.models.api_models import RecordingFavoriteRequest, StartTestCallRequest
 from voicebot.src.observability.event_bus import DashboardEventBus
 from voicebot.src.runtime.connection_registry import ConnectionRegistry
 from voicebot.src.telephony.call_manager import CallManager
@@ -86,9 +87,24 @@ def build_dashboard_router(
             }
         )
 
+    @router.get("/api/testing/personas")
+    async def list_testing_personas() -> JSONResponse:
+        return JSONResponse(test_campaign_manager.list_personas())
+
+    @router.get("/api/testing/scenarios")
+    async def list_testing_scenarios() -> JSONResponse:
+        return JSONResponse(test_campaign_manager.list_scenarios())
+
     @router.post("/api/testing/start-call")
-    async def start_testing_call() -> JSONResponse:
-        run, custom_parameters = test_campaign_manager.plan_next_call()
+    async def start_testing_call(
+        request: StartTestCallRequest | None = None,
+    ) -> JSONResponse:
+        persona_id = request.persona_id if request else None
+        scenario_ids = request.scenario_ids if request else None
+        run, custom_parameters = test_campaign_manager.plan_next_call(
+            persona_id=persona_id,
+            scenario_ids=scenario_ids,
+        )
         metadata = call_manager.create_outbound_call(custom_parameters=custom_parameters)
         activated_run = test_campaign_manager.activate_run(metadata)
         event_bus.begin_call(metadata.call_sid)
@@ -124,6 +140,23 @@ def build_dashboard_router(
     async def list_recordings() -> JSONResponse:
         payload = [recording.model_dump(mode="json") for recording in recording_manager.list_recordings()]
         return JSONResponse(payload)
+
+    @router.post("/api/recordings/{filename}/favorite")
+    async def favorite_recording(filename: str, request: RecordingFavoriteRequest) -> JSONResponse:
+        try:
+            recording = recording_manager.update_favorite(filename, request.favorite)
+        except RecordingManagerError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        event_bus.publish(
+            "log",
+            {
+                "event": "recording_favorite_updated",
+                "filename": recording.filename,
+                "favorite": recording.favorite,
+                "level": "info",
+            },
+        )
+        return JSONResponse({"ok": True, "recording": recording.model_dump(mode="json")})
 
     @router.get("/api/recordings/{filename}")
     async def get_recording(filename: str) -> FileResponse:

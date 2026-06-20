@@ -485,3 +485,35 @@ async def test_audio_bridge_extends_transition_wait_on_new_representative_activi
     assert gemini.sent_text_instructions == ["move to next scenario"]
 
     await bridge.close()
+
+
+@pytest.mark.asyncio
+async def test_audio_bridge_sends_wait_instruction_when_support_is_checking(settings) -> None:
+    sent_messages = []
+
+    async def send_message(message) -> None:
+        sent_messages.append(message)
+
+    session = SessionState.from_metadata(
+        CallMetadata(
+            call_sid="CA123",
+            to_number="+15555550124",
+            from_number="+15555550123",
+            stream_url="wss://example.test/ws/twilio-media",
+        )
+    )
+    gemini = FakeGeminiClient(
+        [
+            GeminiLiveEvent(input_transcript="Let me check that for you"),
+            GeminiLiveEvent(input_transcript="Let me check that for you please"),
+        ]
+    )
+    bridge = AudioBridge(session, settings, gemini, send_message)
+
+    await bridge.start(_build_start_event())
+    await asyncio.sleep(0)
+
+    assert len(gemini.sent_text_instructions) == 1
+    assert "The representative is still checking the current issue" in gemini.sent_text_instructions[0]
+
+    await bridge.close()

@@ -41,7 +41,21 @@ class RecordingSummary(BaseModel):
     report_available: bool = False
     deep_analysis_filename: str | None = None
     deep_analysis_available: bool = False
+    favorite: bool = False
     recording_path: str
+
+
+class StartTestCallRequest(BaseModel):
+    """Optional selection overrides for a test call."""
+
+    persona_id: str | None = None
+    scenario_ids: list[str] | None = None
+
+
+class RecordingFavoriteRequest(BaseModel):
+    """Optional favorite-toggle payload for a recording."""
+
+    favorite: bool | None = None
 
 
 class HealthResponse(BaseModel):

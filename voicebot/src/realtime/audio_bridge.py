@@ -65,6 +65,7 @@ class AudioBridge:
         self._pending_transition_nudge: str | None = None
         self._transition_nudge_task: asyncio.Task[None] | None = None
         self._last_representative_activity_at = 0.0
+        self._representative_hold_active = False
 
     async def start(self, event: TwilioStartEvent) -> None:
         """Start Gemini connectivity after Twilio announces the stream."""
@@ -233,6 +234,7 @@ class AudioBridge:
                         self._pending_user_transcript,
                         event.input_transcript,
                     )
+                    await self._maybe_enter_representative_hold(self._pending_user_transcript)
                     self.logger.info(
                         "call_transcript_updated",
                         call_sid=self.session_state.call_sid,
@@ -268,6 +270,7 @@ class AudioBridge:
                         )
                         self.session_state.append_transcript_turn("user", self._pending_user_transcript)
                         self.gemini_client.remember_user_turn(self._pending_user_transcript)
+                        self._update_representative_hold_state(self._pending_user_transcript)
                         self._pending_user_transcript = ""
                         progress_dirty = True
                     if self._pending_agent_transcript:
@@ -408,6 +411,28 @@ class AudioBridge:
         except asyncio.CancelledError:
             raise
 
+    async def _maybe_enter_representative_hold(self, representative_text: str) -> None:
+        if self._representative_hold_active:
+            return
+        if not _represents_in_progress_support_turn(representative_text):
+            return
+        self._representative_hold_active = True
+        await self.gemini_client.send_text_instruction(
+            "[Hidden patient-direction note. Do not say this note aloud.] "
+            "The representative is still checking the current issue. Do not speak, ask a new question, or repeat the scenario yet. "
+            "Wait silently unless the representative asks you a direct question."
+        )
+
+    def _update_representative_hold_state(self, representative_text: str) -> None:
+        if _represents_in_progress_support_turn(representative_text):
+            self._representative_hold_active = True
+            return
+        if _represents_direct_support_question(representative_text):
+            self._representative_hold_active = False
+            return
+        if representative_text.strip():
+            self._representative_hold_active = False
+
 
 def _merge_transcript(existing: str, incoming: str) -> str:
     """Merge cumulative or delta transcript updates into one coherent turn."""
@@ -452,3 +477,51 @@ def _should_join_without_space(existing: str, incoming: str) -> bool:
     if existing[-1] in "([{/$#@":
         return True
     return False
+
+
+def _represents_in_progress_support_turn(text: str) -> bool:
+    lowered = " ".join(text.lower().split()).strip()
+    if not lowered:
+        return False
+    markers = (
+        "one moment",
+        "let me check",
+        "hold on",
+        "please hold",
+        "give me a moment",
+        "just a moment",
+        "pull that up",
+        "pulling that up",
+        "looking that up",
+        "looking into that",
+        "bear with me",
+        "while i check",
+        "while i look",
+    )
+    return any(marker in lowered for marker in markers)
+
+
+def _represents_direct_support_question(text: str) -> bool:
+    stripped = text.strip()
+    lowered = " ".join(stripped.lower().split()).strip()
+    if not lowered:
+        return False
+    if stripped.endswith("?"):
+        return True
+    question_starts = (
+        "can you",
+        "could you",
+        "what is",
+        "what's",
+        "which",
+        "when",
+        "where",
+        "who",
+        "would you",
+        "do you",
+        "did you",
+        "is it",
+        "is that",
+        "are you",
+    )
+    return lowered.startswith(question_starts)

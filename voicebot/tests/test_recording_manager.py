@@ -68,6 +68,7 @@ async def test_recording_manager_lists_saved_recordings(settings) -> None:
     assert recordings[0].display_name == "recording-0001"
     assert recordings[0].deep_analysis_filename == "recording-0001.deep-analysis.md"
     assert recordings[0].deep_analysis_available is False
+    assert recordings[0].favorite is False
 
     await manager.close()
 
@@ -129,5 +130,25 @@ async def test_recording_manager_lists_deep_analysis_metadata(settings) -> None:
 
     assert recordings[0].deep_analysis_available is True
     assert recordings[0].deep_analysis_filename == "recording-0001.deep-analysis.md"
+
+    await manager.close()
+
+
+@pytest.mark.asyncio
+async def test_recording_manager_updates_favorite_flag(settings) -> None:
+    fake_http = FakeAsyncClient(payload=b"audio-data")
+    manager = RecordingManager(settings, http_client=fake_http)
+
+    await manager.download_and_store(
+        call_sid="CA123",
+        recording_sid="RE123",
+        media_url="https://api.twilio.test/recording.mp3",
+    )
+
+    updated = manager.update_favorite("recording-0001.mp3", True)
+
+    assert updated.favorite is True
+    recordings = manager.list_recordings()
+    assert recordings[0].favorite is True
 
     await manager.close()

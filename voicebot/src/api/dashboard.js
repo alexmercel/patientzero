@@ -24,6 +24,8 @@ const state = {
     active_runs: [],
     next_run_preview: null,
   },
+  availablePersonas: [],
+  availableScenarios: [],
 };
 
 const packetEvents = new Set([
@@ -48,6 +50,7 @@ const recordingRelevantEvents = new Set([
   "twilio_recording_status_received",
   "recording_saved",
   "recording_metadata_saved",
+  "recording_favorite_updated",
 ]);
 
 const testingRelevantEvents = new Set([
@@ -85,6 +88,11 @@ const els = {
   transcriptList: document.getElementById("transcript-list"),
   logList: document.getElementById("log-list"),
   togglePackets: document.getElementById("toggle-packets"),
+  personaSelect: document.getElementById("persona-select"),
+  scenarioChecklist: document.getElementById("scenario-checklist"),
+  scenarioHint: document.getElementById("scenario-hint"),
+  scenarioSelectAll: document.getElementById("scenario-select-all"),
+  scenarioSelectNone: document.getElementById("scenario-select-none"),
   tabButtons: Array.from(document.querySelectorAll(".tab-button")),
   panels: Array.from(document.querySelectorAll(".panel")),
 };
@@ -182,7 +190,10 @@ function renderRecordings() {
     <article class="recording-card">
       <div class="recording-title">
         <strong>${escapeHtml(recording.display_name || recording.recording_sid || "recording")}</strong>
-        <span class="chip">${escapeHtml(formatTime(recording.saved_at))}</span>
+        <div class="recording-title-meta">
+          ${recording.favorite ? '<span class="chip favorite-chip">Favorite</span>' : ""}
+          <span class="chip">${escapeHtml(formatTime(recording.saved_at))}</span>
+        </div>
       </div>
       <div class="recording-meta">call=${escapeHtml(recording.call_sid || "unknown")}
 file=${escapeHtml(recording.filename || "unknown")}</div>
@@ -238,6 +249,13 @@ function renderRecordingLinks(recordings) {
 function renderRecordingActions(recording) {
   return `
     <div class="recording-actions">
+      <button
+        class="recording-favorite-button ${recording.favorite ? "active" : ""}"
+        type="button"
+        data-recording-favorite
+        data-filename="${escapeAttribute(recording.filename)}"
+        data-favorite="${recording.favorite ? "true" : "false"}"
+      >${recording.favorite ? "Unfavorite" : "Favorite"}</button>
       <a class="recording-link" href="${escapeAttribute(`/api/recordings/${recording.filename}`)}" target="_blank" rel="noopener noreferrer">Open Audio</a>
       ${recording.report_available ? `
         <a class="recording-link subtle" href="${escapeAttribute(`/api/recordings/${recording.filename}/report`)}" target="_blank" rel="noopener noreferrer">Open Report</a>
@@ -479,6 +497,45 @@ async function loadRecordings() {
   renderRecordings();
 }
 
+async function toggleRecordingFavorite(button) {
+  const filename = button.dataset.filename;
+  const currentlyFavorite = button.dataset.favorite === "true";
+  if (!filename) {
+    return;
+  }
+
+  button.disabled = true;
+  els.statusNote.textContent = `${currentlyFavorite ? "Removing" : "Adding"} favorite flag...`;
+  try {
+    const response = await fetch(`/api/recordings/${encodeURIComponent(filename)}/favorite`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ favorite: !currentlyFavorite }),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.detail || "favorite update failed");
+    }
+    state.recordings = state.recordings.map((recording) =>
+      recording.filename === payload.recording.filename ? payload.recording : recording
+    );
+    state.recordings.sort((left, right) => {
+      if (left.favorite !== right.favorite) {
+        return left.favorite ? -1 : 1;
+      }
+      return String(right.saved_at || "").localeCompare(String(left.saved_at || ""));
+    });
+    renderRecordings();
+    els.statusNote.textContent = payload.recording.favorite
+      ? `Favorited ${payload.recording.display_name || payload.recording.filename}.`
+      : `Removed favorite from ${payload.recording.display_name || payload.recording.filename}.`;
+  } catch (error) {
+    els.statusNote.textContent = `Favorite update failed: ${error.message}`;
+  } finally {
+    button.disabled = false;
+  }
+}
+
 async function loadSnapshot() {
   const response = await fetch("/api/dashboard/snapshot");
   if (!response.ok) throw new Error(`snapshot failed: ${response.status}`);
@@ -501,6 +558,131 @@ async function loadTestingReport() {
   renderTesting();
 }
 
+function getSelectedPersonaId() {
+  if (!els.personaSelect) return null;
+  const value = els.personaSelect.value;
+  return value || null;
+}
+
+function getSelectedScenarioIds() {
+  if (!els.scenarioChecklist) return null;
+  const checked = Array.from(
+    els.scenarioChecklist.querySelectorAll('input[type="checkbox"]:checked')
+  ).map((input) => input.value);
+  return checked.length > 0 ? checked : null;
+}
+
+function updateScenarioHint() {
+  if (!els.scenarioHint || !els.scenarioChecklist) return;
+  const total = els.scenarioChecklist.querySelectorAll('input[type="checkbox"]').length;
+  const checked = els.scenarioChecklist.querySelectorAll('input[type="checkbox"]:checked').length;
+  if (checked === 0) {
+    els.scenarioHint.textContent = "None selected \u00b7 auto-select";
+  } else if (checked === total) {
+    els.scenarioHint.textContent = `All ${total} selected`;
+  } else {
+    els.scenarioHint.textContent = `${checked} of ${total} selected`;
+  }
+}
+
+function setAllScenarioCheckboxes(checked) {
+  if (!els.scenarioChecklist) return;
+  for (const input of els.scenarioChecklist.querySelectorAll('input[type="checkbox"]')) {
+    input.checked = checked;
+  }
+  updateScenarioHint();
+}
+
+async function loadSelectors() {
+  try {
+    const [personasRes, scenariosRes] = await Promise.all([
+      fetch("/api/testing/personas"),
+      fetch("/api/testing/scenarios"),
+    ]);
+    if (personasRes.ok) {
+      state.availablePersonas = await personasRes.json();
+    }
+    if (scenariosRes.ok) {
+      state.availableScenarios = await scenariosRes.json();
+    }
+    renderSelectors();
+  } catch {
+    // selectors remain empty on error, auto-select still works
+  }
+}
+
+function renderSelectors() {
+  if (els.personaSelect && state.availablePersonas.length) {
+    const current = els.personaSelect.value;
+    els.personaSelect.innerHTML = '<option value="">Auto (random)</option>';
+    for (const persona of state.availablePersonas) {
+      const option = document.createElement("option");
+      option.value = persona.persona_id;
+      option.textContent = `${persona.full_name} (${persona.persona_id})`;
+      els.personaSelect.appendChild(option);
+    }
+    if (current) {
+      els.personaSelect.value = current;
+    }
+  }
+
+  if (els.scenarioChecklist && state.availableScenarios.length) {
+    const previouslyChecked = new Set(
+      Array.from(
+        els.scenarioChecklist.querySelectorAll('input[type="checkbox"]:checked')
+      ).map((input) => input.value)
+    );
+
+    const groups = new Map();
+    for (const scenario of state.availableScenarios) {
+      if (!groups.has(scenario.category)) {
+        groups.set(scenario.category, []);
+      }
+      groups.get(scenario.category).push(scenario);
+    }
+
+    els.scenarioChecklist.innerHTML = "";
+    for (const [category, scenarios] of groups) {
+      const group = document.createElement("div");
+      group.className = "scenario-category-group";
+      group.dataset.open = "true";
+
+      const header = document.createElement("div");
+      header.className = "scenario-category-header";
+      header.innerHTML = `
+        <span class="category-chevron">&#9662;</span>
+        <span class="category-name">${escapeHtml(category.replace(/_/g, " "))}</span>
+        <span class="category-count">${escapeHtml(String(scenarios.length))}</span>
+      `;
+      header.addEventListener("click", () => {
+        const isOpen = group.dataset.open === "true";
+        group.dataset.open = isOpen ? "false" : "true";
+      });
+      group.appendChild(header);
+
+      const itemsDiv = document.createElement("div");
+      itemsDiv.className = "scenario-category-items";
+
+      for (const scenario of scenarios) {
+        const label = document.createElement("label");
+        label.className = "scenario-check-item";
+        label.innerHTML = `
+          <input type="checkbox" value="${escapeAttribute(scenario.scenario_id)}" ${previouslyChecked.has(scenario.scenario_id) ? "checked" : ""}>
+          <span class="check-label">${escapeHtml(scenario.title)}</span>
+          <span class="check-id">${escapeHtml(scenario.scenario_id)}</span>
+        `;
+        itemsDiv.appendChild(label);
+      }
+
+      group.appendChild(itemsDiv);
+      els.scenarioChecklist.appendChild(group);
+    }
+
+    els.scenarioChecklist.addEventListener("change", updateScenarioHint);
+    updateScenarioHint();
+  }
+}
+
 async function startCall() {
   els.startCall.disabled = true;
   if (els.testingStartCall) {
@@ -508,7 +690,17 @@ async function startCall() {
   }
   els.statusNote.textContent = "Preparing test call...";
   try {
-    const response = await fetch("/api/testing/start-call", { method: "POST" });
+    const body = {};
+    const personaId = getSelectedPersonaId();
+    const scenarioIds = getSelectedScenarioIds();
+    if (personaId) body.persona_id = personaId;
+    if (scenarioIds) body.scenario_ids = scenarioIds;
+
+    const response = await fetch("/api/testing/start-call", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
     const payload = await response.json();
     if (!response.ok) {
       throw new Error(payload.detail || "call request failed");
@@ -819,6 +1011,12 @@ if (els.testingStartCall) {
 if (els.testingReset) {
   els.testingReset.addEventListener("click", resetTestingCampaign);
 }
+if (els.scenarioSelectAll) {
+  els.scenarioSelectAll.addEventListener("click", () => setAllScenarioCheckboxes(true));
+}
+if (els.scenarioSelectNone) {
+  els.scenarioSelectNone.addEventListener("click", () => setAllScenarioCheckboxes(false));
+}
 els.hangupCall.addEventListener("click", hangupCall);
 els.refresh.addEventListener("click", () => loadSnapshot().catch((error) => {
   els.statusNote.textContent = `Refresh failed: ${error.message}`;
@@ -827,6 +1025,19 @@ els.togglePackets.addEventListener("click", () => {
   state.hidePackets = !state.hidePackets;
   els.togglePackets.textContent = state.hidePackets ? "Show Packet Logs" : "Hide Packet Logs";
   renderLogs();
+});
+els.recordingList.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) {
+    return;
+  }
+  const button = target.closest("[data-recording-favorite]");
+  if (!(button instanceof HTMLButtonElement)) {
+    return;
+  }
+  toggleRecordingFavorite(button).catch((error) => {
+    els.statusNote.textContent = `Favorite update failed: ${error.message}`;
+  });
 });
 
 for (const button of els.tabButtons) {
@@ -837,6 +1048,7 @@ loadSnapshot().catch((error) => {
   els.statusNote.textContent = `Snapshot failed: ${error.message}`;
 });
 loadTestingReport().catch(() => {});
+loadSelectors().catch(() => {});
 ensureTranscriptEmptyState();
 setActiveTab("live");
 connectDashboardSocket();

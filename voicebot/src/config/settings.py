@@ -61,6 +61,10 @@ class Settings(BaseSettings):
             "- Ask at most one short follow-up question only when a missing detail truly matters from the patient's point of view.\n"
             "- If the representative gives essentially the same answer twice in a row, acknowledge it briefly and move forward instead of asking for the same thing again.\n"
             "- If the representative only partially answered, ask at most one short clarifying follow-up about the missing piece instead of repeating the whole request.\n"
+            "- If the representative did not understand a long or bundled sentence, do not repeat the same full sentence again.\n"
+            "- On the retry, shorten the wording and give one detail at a time, for example name first, then date or time, then visit type if needed.\n"
+            "- If the representative gives a clearly final but bad outcome for the current issue, do not keep pushing just to force a successful result.\n"
+            "- In that case, briefly acknowledge the answer and be ready to move on when the conversation naturally shifts.\n"
             "- Never repeat the same concern, answer, or question unless the representative seems not to have heard it.\n"
             "- Prefer natural conversational progress over filler or generic pleasantries.\n\n"
             "Style:\n"
@@ -94,7 +98,7 @@ class Settings(BaseSettings):
         alias="GEMINI_DEEP_ANALYSIS_TRIM_LEAD_SECONDS",
     )
     representative_turn_settle_seconds: float = Field(
-        default=2.2,
+        default=3.2,
         alias="REPRESENTATIVE_TURN_SETTLE_SECONDS",
     )
     representative_activity_amplitude_threshold: int = Field(

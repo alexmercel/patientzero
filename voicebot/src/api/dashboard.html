@@ -112,6 +112,27 @@
                 </div>
               </div>
 
+              <div class="call-config">
+                <div class="call-config-row">
+                  <label class="call-config-label" for="persona-select">Persona</label>
+                  <select id="persona-select" class="config-select">
+                    <option value="">Auto (random)</option>
+                  </select>
+                </div>
+
+                <div class="call-config-row">
+                  <div class="call-config-label-row">
+                    <span class="call-config-label">Scenarios</span>
+                    <span class="call-config-hint" id="scenario-hint">None selected · auto-select</span>
+                  </div>
+                  <div class="scenario-toggle-row">
+                    <button id="scenario-select-all" class="config-chip-button" type="button">All</button>
+                    <button id="scenario-select-none" class="config-chip-button" type="button">None</button>
+                  </div>
+                  <div id="scenario-checklist" class="scenario-checklist"></div>
+                </div>
+              </div>
+
               <div class="testing-toolbar-buttons">
                 <button id="testing-start-call" class="primary" type="button">Run Test Call</button>
                 <button id="testing-reset" class="secondary" type="button">Reset Scenario Progress</button>

@@ -158,6 +158,7 @@ class TestRunRecord(BaseModel):
     last_representative_signature: str | None = Field(default=None, exclude=True)
     repeated_representative_count: int = Field(default=0, exclude=True)
     active_response_segments: list[str] = Field(default_factory=list, exclude=True)
+    representative_waiting_on_hold: bool = Field(default=False, exclude=True)
 
     @property
     def tested_count(self) -> int:
@@ -205,29 +206,74 @@ class TestCampaignManager:
         self._next_run_preview_id: str | None = None
         self._report = self._load_report()
 
-    def preview_next_call(self) -> TestRunRecord:
+    def list_personas(self) -> list[dict[str, str]]:
+        """Return persona summaries for the selection UI."""
+        return [
+            {"persona_id": persona.persona_id, "full_name": persona.full_name}
+            for persona in self._personas
+        ]
+
+    def list_scenarios(self) -> list[dict[str, str]]:
+        """Return scenario summaries grouped by category for the selection UI."""
+        return [
+            {
+                "scenario_id": scenario.scenario_id,
+                "category": scenario.category,
+                "title": scenario.title,
+            }
+            for scenario in self._scenarios
+        ]
+
+    def preview_next_call(
+        self,
+        persona_id: str | None = None,
+        scenario_ids: list[str] | None = None,
+    ) -> TestRunRecord:
         """Return a cached preview of the next persona/scenario bundle."""
-        if self._next_run_preview_id is not None:
+        has_selection = persona_id is not None or (scenario_ids is not None and len(scenario_ids) > 0)
+        if not has_selection and self._next_run_preview_id is not None:
             preview = self._planned_runs.get(self._next_run_preview_id)
             if preview is not None:
                 return preview
             self._next_run_preview_id = None
 
-        run = self._create_planned_run()
+        run = self._create_planned_run(persona_id=persona_id, scenario_ids=scenario_ids)
         self._planned_runs[run.run_id] = run
-        self._next_run_preview_id = run.run_id
+        if not has_selection:
+            self._next_run_preview_id = run.run_id
         return run
 
-    def plan_next_call(self) -> tuple[TestRunRecord, dict[str, str]]:
+    def plan_next_call(
+        self,
+        persona_id: str | None = None,
+        scenario_ids: list[str] | None = None,
+    ) -> tuple[TestRunRecord, dict[str, str]]:
         """Choose a persona and a batch of scenarios for a new test call."""
-        run = self.preview_next_call()
-        self._next_run_preview_id = None
+        run = self.preview_next_call(persona_id=persona_id, scenario_ids=scenario_ids)
+        if self._next_run_preview_id == run.run_id:
+            self._next_run_preview_id = None
         return run, self._custom_parameters_for_run(run)
 
-    def _create_planned_run(self) -> TestRunRecord:
+    def _create_planned_run(
+        self,
+        persona_id: str | None = None,
+        scenario_ids: list[str] | None = None,
+    ) -> TestRunRecord:
         """Build a planned run without activating a Twilio call."""
-        persona = self._rng.choice(self._personas)
-        scenarios = self._select_scenarios_for_call()
+        if persona_id is not None:
+            persona = self._persona_by_id(persona_id)
+        else:
+            persona = self._rng.choice(self._personas)
+
+        if scenario_ids is not None and len(scenario_ids) > 0:
+            scenarios = [
+                self._scenario_map[sid]
+                for sid in scenario_ids
+                if sid in self._scenario_map
+            ]
+        else:
+            scenarios = self._select_scenarios_for_call()
+
         scenario_asks = {
             scenario.scenario_id: _render_scenario_ask_lines(scenario, persona, self.settings)
             for scenario in scenarios
@@ -332,14 +378,21 @@ class TestCampaignManager:
                 "- Start the call like a real patient. Greet naturally, let the representative lead intake, and wait to share your name until asked.",
                 "- If the representative asks for your name, provide your persona name and allow them to create or verify the profile before moving into the request.",
                 "- Bring up only the current issue you are working on. Do not mention future issues unless you receive a separate hidden transition note later in the call.",
-                "- Use wording close to the provided ask lines so the evaluation can recognize what you tested, but keep the conversation natural.",
+                "- Treat the current scenario as context and intent, not as a rigid script you must recite word for word.",
+                "- Use the ask lines as coverage anchors, but adapt your wording to the representative's actual answer, question, and tone.",
                 "- If the first ask line is a correction, contradiction, or short fragment, first open the topic naturally before using that line in context.",
                 "- For multi-line scenarios, use the later lines only as the conversation develops; do not dump every line at once.",
+                "- Always respond to the representative's latest direct question or new information before repeating any scenario request.",
                 "- Stay on the current scenario until the representative has clearly answered it, rejected it, or asked a necessary follow-up question.",
                 "- If the representative says they are checking, looking something up, or asks for a moment, wait for their follow-up instead of jumping to a new issue.",
                 "- Treat multi-part answers with pauses as one ongoing response, not as an opening to ask something new.",
                 "- After the representative starts answering, assume they may pause briefly, type, click around, or continue after a short silence. Do not interrupt just because there is a short gap or background activity.",
+                "- If the representative partially answers the issue, respond only to the missing part instead of restarting from the first ask line.",
                 "- If the representative misunderstands, retry once briefly and then continue.",
+                "- If a long sentence with several details was not understood, do not repeat the same big sentence again.",
+                "- On the retry, break the information into smaller pieces and provide one detail at a time.",
+                "- If the representative gives a clearly final but bad answer to the current issue, do not keep pushing just to make the scenario pass.",
+                "- Briefly acknowledge the bad outcome, then wait for the next hidden transition instead of arguing in circles.",
                 "- If the representative gives a clearly favorable or usable answer, accept it and do not repeat the same request.",
                 "- If the representative gives essentially the same answer twice in a row, acknowledge it briefly and move on only after a hidden transition note updates the issue.",
                 "- If only part of the answer is missing, ask one short clarifying follow-up about the missing piece instead of repeating the entire request.",
@@ -387,13 +440,18 @@ class TestCampaignManager:
         note_lines = [
             "[Hidden patient-direction note. Do not say this note aloud.]",
             "Stay the same patient in the same phone call.",
-            "The previous issue is handled enough. At the next natural opening after the representative finishes, bring up this next issue.",
+            "The previous issue is handled enough. At the next natural opening after the representative fully finishes, bring up this next issue.",
+            "This next scenario is a goal, not a script.",
+            "First respond to the representative's latest answer or question if they are still engaging the current topic.",
+            "Adapt the sample lines below to the conversation instead of repeating them verbatim if part of the issue was already addressed.",
             f"Scenario: {scenario.scenario_id} | {scenario.category} | {scenario.title}",
             f"Natural opener hint: {_scenario_opening_hint(scenario)}",
             "Use wording close to these ask lines when they fit naturally:",
             ]
         for ask_line in ask_lines:
             note_lines.append(f"- {ask_line}")
+        if scenario.expected:
+            note_lines.append(f"Goal to get answered: {scenario.expected}")
         note_lines.append("Do not mention testing or future issues.")
         return "\n".join(note_lines)
 
@@ -465,18 +523,21 @@ class TestCampaignManager:
             if run.active_matched_ask_lines < len(ask_lines):
                 continue
 
-            if _is_stall_response(turn.text):
+            if _is_in_progress_representative_turn(scenario, turn.text):
                 run.active_status = "awaiting_response"
+                run.representative_waiting_on_hold = True
                 continue
 
             if _is_follow_up_question(turn.text):
                 run.active_representative_turns += 1
                 run.active_status = "awaiting_response"
+                run.representative_waiting_on_hold = False
                 run.active_response_segments.append(turn.text)
                 continue
 
             run.active_representative_turns += 1
             run.active_status = "response_received"
+            run.representative_waiting_on_hold = False
             run.active_response_segments.append(turn.text)
 
             normalized = _normalize_text(turn.text)
@@ -488,7 +549,13 @@ class TestCampaignManager:
 
             cumulative_response = " ".join(run.active_response_segments).strip()
             _, passed = _evaluate_representative_response(scenario, cumulative_response)
-            if passed or run.repeated_representative_count >= 2:
+            if _should_wait_for_more_representative_context(scenario, turn.text, cumulative_response):
+                continue
+            if (
+                passed
+                or _should_advance_after_failed_response(scenario, turn.text, cumulative_response)
+                or run.repeated_representative_count >= 2
+            ):
                 if self._advance_run_to_next_scenario(run, scenarios):
                     transition_nudge = self.build_transition_nudge(call_sid)
                 else:
@@ -665,6 +732,7 @@ class TestCampaignManager:
         run.last_representative_signature = None
         run.repeated_representative_count = 0
         run.active_response_segments = []
+        run.representative_waiting_on_hold = False
         return True
 
     def _resolved_scenarios_for_run(self, run: TestRunRecord) -> list[TestScenario]:
@@ -1373,6 +1441,109 @@ def _is_stall_response(text: str) -> bool:
         "while i check",
     )
     return any(marker in lowered for marker in stall_markers)
+
+
+def _is_noncommittal_acknowledgement(text: str) -> bool:
+    lowered = _normalize_text(text)
+    if not lowered:
+        return False
+    short_acknowledgements = {
+        "ok",
+        "okay",
+        "alright",
+        "all right",
+        "got it",
+        "sure",
+        "i see",
+        "understood",
+        "thanks",
+        "thank you",
+    }
+    return lowered in short_acknowledgements
+
+
+def _is_in_progress_representative_turn(scenario: TestScenario, text: str) -> bool:
+    lowered = _normalize_text(text)
+    if not lowered:
+        return False
+    _, current_turn_passed = _evaluate_representative_response(scenario, text)
+    if current_turn_passed:
+        return False
+    if _is_stall_response(text):
+        return True
+    if _is_noncommittal_acknowledgement(text):
+        return True
+    in_progress_markers = (
+        "checking that",
+        "looking that up",
+        "looking into it",
+        "reviewing that",
+        "pulling that up",
+        "give me a second",
+        "give me a sec",
+        "bear with me",
+        "just a sec",
+        "one second",
+        "while i look",
+        "while i check",
+    )
+    return any(marker in lowered for marker in in_progress_markers)
+
+
+def _should_wait_for_more_representative_context(
+    scenario: TestScenario,
+    latest_turn_text: str,
+    cumulative_response: str,
+) -> bool:
+    latest = _normalize_text(latest_turn_text)
+    if not latest:
+        return True
+    if _is_in_progress_representative_turn(scenario, latest_turn_text):
+        return True
+    if _is_follow_up_question(latest_turn_text):
+        return True
+    if latest.endswith(("and", "but", "so", "because", "then")):
+        return True
+    if len(latest.split()) <= 4 and not _evaluate_representative_response(scenario, cumulative_response)[1]:
+        return True
+    return False
+
+
+def _should_advance_after_failed_response(
+    scenario: TestScenario,
+    latest_turn_text: str,
+    cumulative_response: str,
+) -> bool:
+    latest = _normalize_text(latest_turn_text)
+    cumulative = _normalize_text(cumulative_response)
+    if not latest:
+        return False
+    if _is_in_progress_representative_turn(scenario, latest_turn_text):
+        return False
+    if _is_follow_up_question(latest_turn_text):
+        return False
+    if _contains_any(cumulative, ["i am a pretty good ai", "as an ai", "i m a pretty good ai"]):
+        return True
+
+    decisive_failure_markers = (
+        "support representative",
+        "human representative",
+        "transfer you",
+        "transfer this call",
+        "unable to help",
+        "cannot help",
+        "can t help",
+        "unable to do that",
+        "cannot do that",
+        "can t do that",
+        "don t have access",
+        "do not have access",
+        "i don t know",
+        "i do not know",
+        "you need to call",
+        "you need to contact",
+    )
+    return any(marker in latest for marker in decisive_failure_markers)
 
 
 def _is_follow_up_question(text: str) -> bool:

@@ -52,6 +52,9 @@ def test_settings_default_system_instruction_has_call_continuity_rules(settings:
     assert "gives a favorable, usable, or clearly correct answer" in settings.gemini_system_instruction
     assert "Do not ask to be transferred to a human" in settings.gemini_system_instruction
     assert "Do not switch to a different unrelated question" in settings.gemini_system_instruction
+    assert "do not repeat the same full sentence again" in settings.gemini_system_instruction
+    assert "give one detail at a time" in settings.gemini_system_instruction
+    assert "do not keep pushing just to force a successful result" in settings.gemini_system_instruction
 
 
 def test_settings_default_deep_analysis_model_is_flash(settings: Settings) -> None:
@@ -63,8 +66,8 @@ def test_settings_default_deep_analysis_fallback_model_is_flash_lite(settings: S
 
 
 def test_settings_default_deep_analysis_trim_lead_seconds(settings: Settings) -> None:
-    assert settings.gemini_deep_analysis_trim_lead_seconds == 3.0
+    assert Settings.model_fields["gemini_deep_analysis_trim_lead_seconds"].default == 3.0
 
 
 def test_settings_default_representative_turn_settle_seconds(settings: Settings) -> None:
-    assert settings.representative_turn_settle_seconds == 3.2
+    assert Settings.model_fields["representative_turn_settle_seconds"].default == 3.2
