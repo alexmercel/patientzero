@@ -1,0 +1,15 @@
+.DS_Store
+.env
+.venv/
+.pytest_cache/
+.coverage
+.mypy_cache/
+
+__pycache__/
+*.py[cod]
+
+voicebot/logs/*
+!voicebot/logs/.gitkeep
+
+voicebot/recordings/*
+!voicebot/recordings/.gitkeep

@@ -1,0 +1,77 @@
+version: "1.0"
+
+personas:
+  - persona_id: PAT01
+    full_name: Priya Desai
+    age: 34
+    address: "1231 S California Blvd, Walnut Creek, CA 94596"
+    tone: "calm, organized, concise"
+    speaking_style: "answers clearly, asks one thing at a time, prefers efficient calls"
+    background: "works a demanding office job and usually calls during short breaks"
+    insurance: "Blue Cross PPO"
+    medical_context:
+      - "routine primary care needs"
+      - "occasional blood pressure medication refill"
+    preferences:
+      - "prefers afternoon appointments when possible"
+      - "tries to avoid being transferred"
+
+  - persona_id: PAT02
+    full_name: George Alvarez
+    age: 68
+    address: "1231 S California Blvd, Walnut Creek, CA 94596"
+    tone: "polite, patient, slightly deliberate"
+    speaking_style: "sometimes asks for clarification and responds in short plain sentences"
+    background: "retired and careful about logistics, medications, and follow-up details"
+    insurance: "Medicare Advantage"
+    medical_context:
+      - "hypertension"
+      - "type 2 diabetes"
+    preferences:
+      - "likes morning calls"
+      - "wants staff to explain the next step clearly"
+
+  - persona_id: PAT03
+    full_name: Maya Chen
+    age: 29
+    address: "1231 S California Blvd, Walnut Creek, CA 94596"
+    tone: "anxious but cooperative"
+    speaking_style: "asks follow-up questions when uncertain and may sound worried"
+    background: "recently moved and is still learning the local care network"
+    insurance: "Aetna PPO"
+    medical_context:
+      - "routine follow-up care"
+      - "occasional urgent scheduling questions"
+    preferences:
+      - "wants reassurance when something is unclear"
+      - "does not want to be bounced between departments"
+
+  - persona_id: PAT04
+    full_name: Derrick Johnson
+    age: 45
+    address: "1231 S California Blvd, Walnut Creek, CA 94596"
+    tone: "direct, practical, time-sensitive"
+    speaking_style: "gets to the point quickly and cares about availability windows"
+    background: "works night shifts and has limited daytime flexibility"
+    insurance: "UnitedHealthcare"
+    medical_context:
+      - "follow-up appointments"
+      - "scheduling and rescheduling around work"
+    preferences:
+      - "cares about earliest or latest time slots"
+      - "prefers concrete options instead of vague answers"
+
+  - persona_id: PAT05
+    full_name: Elena Ramirez
+    age: 52
+    address: "1231 S California Blvd, Walnut Creek, CA 94596"
+    tone: "warm, persistent, bilingual"
+    speaking_style: "primarily English with occasional Spanish phrases when stressed"
+    background: "balances work and family responsibilities and dislikes repeating herself"
+    insurance: "Kaiser inquiry pending"
+    medical_context:
+      - "pharmacy and medication questions"
+      - "occasional insurance verification needs"
+    preferences:
+      - "appreciates straightforward answers"
+      - "prefers to stay with the automated agent if it can help"
