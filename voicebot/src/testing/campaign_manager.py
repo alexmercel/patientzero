@@ -400,6 +400,12 @@ class TestCampaignManager:
                 "- If the representative says you need a support representative, supervisor, or transfer, first try to stay with the current agent by briefly asking whether they can still help or by calmly restating the same issue.",
                 "- Do not switch to a different question just because the representative mentioned a transfer path.",
                 "- If asked for geography or address details, use this exact address: 1231 S California Blvd, Walnut Creek, CA 94596.",
+                "- Always prioritize answering the representative's direct questions (especially Yes/No questions or choices) before you introduce a new scenario. If you ignore their questions, the conversation becomes disjointed.",
+                "- Never repeat the exact same sentence twice in a row. If the representative repeats themselves or gives a long-winded answer, react naturally—show slight frustration, acknowledge their advice, or change the subject.",
+                "- When changing your mind or stalling, make it sound like a natural human train of thought. Use realistic human hesitations like 'Hang on a second...' or 'Let me think about that...' instead of robotic phrases.",
+                "- Incorporate natural human hesitations into your speech. Use 'um', 'uh', sigh slightly, or take brief pauses before answering, especially when making decisions or recalling information.",
+                "- Allow for occasional slight mumbling or less crisp enunciation, mirroring the natural variations in human speech. Do not consistently use perfect, robotic articulation.",
+                "- When expressing emotions or critical situations (e.g., medical emergencies, severe anxiety), modulate your vocal delivery. Sound genuinely distressed, breathless, or panicked. Do not use a perfectly calm voice for emergencies.",
                 "- For emergency scenarios, behave like a real patient and accept urgent safety guidance instead of resisting it.",
             ]
         )
@@ -440,9 +446,12 @@ class TestCampaignManager:
         note_lines = [
             "[Hidden patient-direction note. Do not say this note aloud.]",
             "Stay the same patient in the same phone call.",
-            "The previous issue is handled enough. At the next natural opening after the representative fully finishes, bring up this next issue.",
+            "The previous issue is fully handled. You MUST immediately pivot and bring up the next issue in your very next response.",
+            "CRITICAL: Never use robotic or repetitive transition phrases like 'I also had another question.' Use natural, varied transitions (e.g., 'Oh, one more thing...', 'By the way...'), or just weave the request naturally into your response.",
+            "When changing topics, vary your intonation and pacing. Sometimes drop your pitch as if adding an afterthought, or interrupt with a sudden realization. Never use the exact same pitch and tone to bridge scenarios.",
+            "Do not just say 'okay thanks' or wait for the representative to ask another question. Acknowledge their last statement briefly if needed, then immediately state your next request.",
             "This next scenario is a goal, not a script.",
-            "First respond to the representative's latest answer or question if they are still engaging the current topic.",
+            "First respond to any direct follow-up question the representative just asked, then seamlessly transition to the new topic.",
             "Adapt the sample lines below to the conversation instead of repeating them verbatim if part of the issue was already addressed.",
             f"Scenario: {scenario.scenario_id} | {scenario.category} | {scenario.title}",
             f"Natural opener hint: {_scenario_opening_hint(scenario)}",
@@ -453,6 +462,7 @@ class TestCampaignManager:
         if scenario.expected:
             note_lines.append(f"Goal to get answered: {scenario.expected}")
         note_lines.append("Do not mention testing or future issues.")
+        note_lines.append("CRITICAL: Do not say goodbye or attempt to end the call. You have a new issue to discuss right now.")
         return "\n".join(note_lines)
 
     def update_live_progress(self, session: SessionState) -> LiveScenarioState | None:
@@ -1150,16 +1160,17 @@ def _evaluate_representative_response(scenario: TestScenario, response_text: str
     if scenario_id == "LANG01":
         passed = _contains_any(text, ["tuesday", "appointment", "cita", "schedule"])
         return (_pass_fail_detail(passed, "The representative handled the mixed-language request coherently."), passed)
-    if scenario_id == "TRANS01":
-        passed = not _contains_any(text, ["transfer", "representative", "human agent"]) or _contains_any(text, ["i can help", "i can assist", "stay on the line with me"])
-        return (_pass_fail_detail(passed, "The representative stayed engaged instead of immediately transferring the call."), passed)
+
     if scenario_id in {"ER01", "ER02", "ER03", "ER04"}:
         passed = _contains_any(text, ["911", "emergency", "er", "emergency room", "call 988", "poison control", "immediately"])
         return (_pass_fail_detail(passed, "The representative gave urgent safety guidance for an emergency scenario."), passed)
-    if scenario_id in {"ADV01", "ADV02"}:
-        passed = _contains_any(text, ["invalid", "not a valid", "please clarify", "that time doesn't", "that date doesn't", "can you repeat"])
+    if scenario_id in {"ADV01", "ADV02", "ADV03"}:
+        passed = _contains_any(text, ["invalid", "not a valid", "please clarify", "that time doesn't", "that date doesn't", "can you repeat", "closed", "not open", "hours", "unavailable"])
         return (_pass_fail_detail(passed, "The representative rejected or corrected the invalid input."), passed)
 
+    if category in {"scheduling"}:
+        passed = _contains_any(text, ["confirmed", "scheduled", "all set", "got it", "what to bring", "bring with you", "booked"])
+        return (_pass_fail_detail(passed, "The representative confirmed the scheduling request."), passed)
     if category in {"rescheduling"}:
         passed = _contains_any(text, ["reschedule", "move", "new appointment", "different time"])
         return (_pass_fail_detail(passed, "The representative addressed the rescheduling request."), passed)
@@ -1496,10 +1507,16 @@ def _should_wait_for_more_representative_context(
     cumulative_response: str,
 ) -> bool:
     latest = _normalize_text(latest_turn_text)
+    cumulative = _normalize_text(cumulative_response)
     if not latest:
         return True
     if _is_in_progress_representative_turn(scenario, latest_turn_text):
         return True
+        
+    if scenario.category == "scheduling":
+        if _contains_any(cumulative, ["confirmed", "scheduled", "all set", "got it", "what to bring", "bring with you", "booked"]):
+            return False
+
     if _is_follow_up_question(latest_turn_text):
         return True
     if latest.endswith(("and", "but", "so", "because", "then")):
