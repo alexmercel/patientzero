@@ -7,8 +7,8 @@
 - [Architecture doc](#agent-architecture): System architecture, agent responsibilities, and key design choices.
 - [Call transcripts and recordings](./voicebot/favorited_recording_exports): 11 favorited calls with MP3 recordings, both-sided markdown transcripts, per-call reports, and deep-analysis reports.
 - [Bug report](./voicebot/favorited_recording_exports/comprehensive_qa_report.md): Consolidated QA findings across the favorited calls.
-- [Loom walkthrough video](TODO_ADD_LOOM_WALKTHROUGH_URL): Placeholder for the max 5-minute product/approach walkthrough.
-- [AI debugging screen recording](TODO_ADD_AI_DEBUGGING_SCREEN_RECORDING_URL): Placeholder for the 5-minute recording showing prompting/debugging/fixing with AI.
+- [Loom walkthrough video](https://www.loom.com/share/98c5ce1fb22646668909bb65b1e3b4ff): 5-minute walkthrough of the approach and what was built. I used ChatGPT to plan the Loom because the time limit was short and there was a lot to explain, so the walkthrough had to be structured strategically.
+- [AI debugging screen recording](https://drive.google.com/drive/folders/1nIQgumaL8Uud7-Z5gi_0cSzbj_Dzgp7C?usp=sharing): Clips and screenshots from prompting/debugging/fixing work. (I forgot to record the full end-to-end process; these are representative clips and screenshots from my work. If helpful, I can share more screenshots or discuss over a call how I use AI.)
 
 `PatientZero` is an agentic Python voice-testing harness for stress testing a healthcare support line over real phone calls. It places outbound Twilio calls, streams live audio to Gemini through the official `google-genai` SDK, simulates realistic patient personas, captures recordings, and produces scenario-level QA reports in the dashboard.
 
