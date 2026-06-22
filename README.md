@@ -1,5 +1,15 @@
 # PatientZero
 
+## Submission Deliverables
+
+- [Working code](./voicebot/src): Python voice bot implementation.
+- [README](./README.md): Setup, ngrok-first run instructions, dashboard workflow, and troubleshooting.
+- [Architecture doc](#agent-architecture): System architecture, agent responsibilities, and key design choices.
+- [Call transcripts and recordings](./voicebot/favorited_recording_exports): 11 favorited calls with MP3 recordings, both-sided markdown transcripts, per-call reports, and deep-analysis reports.
+- [Bug report](./voicebot/favorited_recording_exports/comprehensive_qa_report.md): Consolidated QA findings across the favorited calls.
+- [Loom walkthrough video](TODO_ADD_LOOM_WALKTHROUGH_URL): Placeholder for the max 5-minute product/approach walkthrough.
+- [AI debugging screen recording](TODO_ADD_AI_DEBUGGING_SCREEN_RECORDING_URL): Placeholder for the 5-minute recording showing prompting/debugging/fixing with AI.
+
 `PatientZero` is an agentic Python voice-testing harness for stress testing a healthcare support line over real phone calls. It places outbound Twilio calls, streams live audio to Gemini through the official `google-genai` SDK, simulates realistic patient personas, captures recordings, and produces scenario-level QA reports in the dashboard.
 
 ## What It Does
