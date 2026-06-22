@@ -1,0 +1,32 @@
+{
+  "call_metadata": {
+    "call_sid": "CAba64cb4e9bb2a555c210060adad32550",
+    "created_at": "2026-06-22T00:04:33.863130Z",
+    "custom_parameters": {
+      "test_mode": "true",
+      "test_persona_id": "PAT01",
+      "test_planning_mode": "campaign",
+      "test_run_id": "run_0e9124004096",
+      "test_scenario_ids": "ER05"
+    },
+    "from_number": "+15707760675",
+    "recording_enabled": true,
+    "recording_path": "voicebot/recordings/recording-0030.mp3",
+    "recording_sid": "RE190f0cf2767ecc3cf489689790625cbe",
+    "status": "completed",
+    "stream_sid": "MZ7433adb0bb826ab7a66c79e23eb6c889",
+    "stream_url": "wss://wages-monthly-myself.ngrok-free.dev/ws/twilio-media",
+    "to_number": "+13233347408",
+    "updated_at": "2026-06-22T00:07:39.756686Z"
+  },
+  "call_sid": "CAba64cb4e9bb2a555c210060adad32550",
+  "deep_analysis_filename": "recording-0030.deep-analysis.md",
+  "display_name": "recording-0030",
+  "favorite": true,
+  "filename": "recording-0030.mp3",
+  "media_url": "https://api.twilio.com/2010-04-01/Accounts/AC_REDACTED/Recordings/RE190f0cf2767ecc3cf489689790625cbe.mp3",
+  "recording_path": "voicebot/recordings/recording-0030.mp3",
+  "recording_sid": "RE190f0cf2767ecc3cf489689790625cbe",
+  "report_filename": "recording-0030.md",
+  "saved_at": "2026-06-22T00:07:39.756339+00:00"
+}

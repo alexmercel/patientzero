@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PatientZero</title>
+  <link rel="stylesheet" href="/assets/dashboard.css">
+</head>
+<body class="landing-page">
+  <main class="landing-shell">
+    <section class="landing-hero surface">
+      <div class="landing-hero-grid">
+        <div>
+          <div class="eyebrow">PatientZero Architecture</div>
+          <h1>Agentic stress testing for healthcare voice support.</h1>
+          <p>
+            PatientZero places realistic patient personas into live Twilio calls, streams the conversation
+            through Gemini Live, tracks scenario coverage in real time, and turns recordings into QA evidence.
+          </p>
+        </div>
+        <aside class="landing-system-card" aria-label="Current runtime summary">
+          <span class="landing-kicker">Runtime Shape</span>
+          <strong>FastAPI app + in-process agents</strong>
+          <p>Twilio handles the phone leg, Gemini speaks as the patient, and deterministic Python agents coordinate state, tools, recordings, and reports.</p>
+        </aside>
+      </div>
+      <div class="landing-actions">
+        <a class="primary link-button" href="/dashboard">Open Dashboard</a>
+        <a class="secondary link-button" href="/healthz">Health Check</a>
+        <a class="secondary link-button" href="/api/agents">Agent Status</a>
+      </div>
+    </section>
+
+    <section class="landing-section surface">
+      <div class="landing-section-heading">
+        <div>
+          <span class="landing-kicker">System Map</span>
+          <h2>How the live call path is wired</h2>
+        </div>
+        <p>The live path is intentionally conservative: Gemini remains the voice model, while deterministic Python services decide what should happen next.</p>
+      </div>
+      <div class="architecture-grid">
+        <article class="architecture-node">
+          <span>1</span>
+          <h3>Operator Dashboard</h3>
+          <p>Preview persona/scenarios, start calls, hang up, move to the next scenario, favorite recordings, and review evidence.</p>
+        </article>
+        <article class="architecture-node">
+          <span>2</span>
+          <h3>FastAPI Routes</h3>
+          <p>Expose dashboard APIs, Twilio callbacks, WebSocket endpoints, recording downloads, reports, and agent status.</p>
+        </article>
+        <article class="architecture-node">
+          <span>3</span>
+          <h3>Agent Runtime</h3>
+          <p>Runs deterministic agents in-process and mirrors selected events into the dashboard event stream.</p>
+        </article>
+        <article class="architecture-node">
+          <span>4</span>
+          <h3>Twilio Media Stream</h3>
+          <p>Connects the phone call to `/ws/twilio-media`, sends 8 kHz mu-law audio, and receives synthesized audio back.</p>
+        </article>
+        <article class="architecture-node">
+          <span>5</span>
+          <h3>AudioBridge</h3>
+          <p>Converts audio between Twilio and Gemini, detects barge-in, waits through hold/checking turns, and queues hidden scenario nudges.</p>
+        </article>
+        <article class="architecture-node">
+          <span>6</span>
+          <h3>Gemini Live</h3>
+          <p>Uses the official `google-genai` SDK for realtime patient speech, input/output transcripts, voice selection, and session continuity.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="landing-section surface">
+      <div class="landing-section-heading">
+        <div>
+          <span class="landing-kicker">Call Lifecycle</span>
+          <h2>What happens when a test call starts</h2>
+        </div>
+        <p>This is the exact control flow from clicking `Run Test Call` to post-call reports.</p>
+      </div>
+      <ol class="call-flow">
+        <li><strong>Plan preview is consumed.</strong><p>`CampaignSelectorAgent` selects the cached persona and scenario order so the started call matches the dashboard preview.</p></li>
+        <li><strong>Twilio call is created.</strong><p>`CallManager` calls the Twilio REST SDK, embeds run metadata in custom parameters, and configures status, stream, and recording callbacks.</p></li>
+        <li><strong>Transcript session resets.</strong><p>`TranscriptAgent` clears the live chat view for the new call and scopes future transcript events to the active call SID.</p></li>
+        <li><strong>Twilio opens the media WebSocket.</strong><p>The `/ws/twilio-media` route receives `start`, creates a `SessionState`, attaches the stream SID, and registers the `AudioBridge`.</p></li>
+        <li><strong>Gemini Live connects.</strong><p>`GeminiLiveClient` receives persona context plus the current scenario only, then streams audio and transcripts through the official SDK.</p></li>
+        <li><strong>Scenario orchestration runs during the call.</strong><p>`ScenarioOrchestratorAgent` and `TestCampaignManager` detect asks, waits, terminal pass/fail answers, repeated answers, and graceful transitions.</p></li>
+        <li><strong>Dashboard updates live.</strong><p>`DashboardEventBus` broadcasts transcript messages, active scenario state, call events, recording events, and testing progress over `/ws/dashboard`.</p></li>
+        <li><strong>Call finalizes into artifacts.</strong><p>When Twilio sends stop/status/recording callbacks, the run is evaluated, recordings are synced, markdown is generated, and deep analysis is scheduled.</p></li>
+      </ol>
+    </section>
+
+    <section class="landing-section surface">
+      <div class="landing-section-heading">
+        <div>
+          <span class="landing-kicker">Agents</span>
+          <h2>Small agents and their responsibilities</h2>
+        </div>
+        <p>These agents are deterministic Python coordinators, not separate LLMs. They make the live call path easier to reason about and test.</p>
+      </div>
+      <div class="agent-grid">
+        <article><h3>CallSessionAgent</h3><p>Wraps call creation, active call listing, and hangup behavior through `CallManager`.</p></article>
+        <article><h3>TranscriptAgent</h3><p>Owns live transcript reset, committed/live transcript state, and call-scoped transcript ingestion.</p></article>
+        <article><h3>CampaignSelectorAgent</h3><p>Owns persona/scenario preview, pending-first planning, operator overrides, and reset behavior.</p></article>
+        <article><h3>ScenarioOrchestratorAgent</h3><p>Owns active scenario state, pass/fail terminal detection, and graceful next/change scenario transitions.</p></article>
+        <article><h3>RecordingAgent</h3><p>Wraps recording listing, favorite flags, markdown links, deep-analysis links, and artifact metadata.</p></article>
+        <article><h3>DeepAnalysisAgent</h3><p>Wraps post-call audio analysis using Gemini Flash with fallback behavior.</p></article>
+        <article><h3>DashboardAgent</h3><p>Assembles dashboard snapshots from manager and agent-owned state without owning live call logic.</p></article>
+      </div>
+    </section>
+
+    <section class="landing-section surface">
+      <div class="landing-section-heading">
+        <div>
+          <span class="landing-kicker">Software Stack</span>
+          <h2>Libraries and tools by responsibility</h2>
+        </div>
+        <p>PatientZero is a Python-first app with a plain HTML/CSS/JavaScript dashboard to keep local debugging straightforward.</p>
+      </div>
+      <div class="stack-grid">
+        <article><span>Web server</span><h3>FastAPI + Uvicorn</h3><p>`fastapi>=0.115` serves APIs, HTML, assets, Twilio callbacks, and WebSockets. `uvicorn[standard]>=0.30` runs the ASGI server.</p></article>
+        <article><span>Realtime voice</span><h3>Twilio + google-genai</h3><p>`twilio>=9.2` creates calls and TwiML streams. `google-genai>=1.20` powers Gemini Live and deep analysis.</p></article>
+        <article><span>Configuration</span><h3>Pydantic Settings + dotenv</h3><p>`pydantic>=2.8`, `pydantic-settings>=2.3`, and `python-dotenv>=1.0` load `.env` and validate runtime settings.</p></article>
+        <article><span>Storage</span><h3>Local files</h3><p>Scenarios/personas live in YAML. Recordings, JSON sidecars, markdown reports, deep-analysis reports, logs, and testing state live under `voicebot/`.</p></article>
+        <article><span>Networking</span><h3>httpx + ngrok</h3><p>`httpx>=0.27` downloads Twilio recordings. `run_with_ngrok.sh` can expose the app and export `PUBLIC_BASE_URL` for Twilio.</p></article>
+        <article><span>Observability</span><h3>structlog + dashboard bus</h3><p>`structlog>=24.2` emits structured events that are persisted to logs and streamed into the dashboard.</p></article>
+        <article><span>Audio utilities</span><h3>Python audio helpers + ffmpeg</h3><p>Built-in helpers convert mu-law/PCM and resample audio. Optional `ffmpeg` trims the first seconds before deep analysis.</p></article>
+        <article><span>Quality gate</span><h3>pytest + pytest-asyncio</h3><p>`pytest>=8.2` and `pytest-asyncio>=0.23` cover agents, routes, audio bridge, campaign logic, recordings, and Gemini client behavior.</p></article>
+      </div>
+    </section>
+
+    <section class="landing-section surface">
+      <div class="landing-section-heading">
+        <div>
+          <span class="landing-kicker">Operator Tools</span>
+          <h2>What the dashboard gives you</h2>
+        </div>
+      </div>
+      <div class="landing-grid">
+        <article class="landing-card">
+          <h3>Live Chat</h3>
+          <p>Persistent transcript for both sides of the call, active scenario display, graceful `Next Scenario`, and manual scenario selection.</p>
+        </article>
+        <article class="landing-card">
+          <h3>Testing</h3>
+          <p>Next-run preview, persona/scenario selection, coverage status, failure counter, active run state, historical runs, and exact evidence snippets.</p>
+        </article>
+        <article class="landing-card">
+          <h3>Recordings</h3>
+          <p>Sequential audio files, favorites, markdown reports, deep-analysis reports, and direct artifact links for findings worth submitting.</p>
+        </article>
+        <article class="landing-card">
+          <h3>Ops And Logs</h3>
+          <p>Public URL, WebSocket stream URL, active calls, recent calls, dashboard events, and packet-level logs when needed.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="landing-section surface">
+      <div class="landing-section-heading">
+        <div>
+          <span class="landing-kicker">Artifacts And APIs</span>
+          <h2>What gets produced</h2>
+        </div>
+        <p>Reports are designed for stress-test review: every important result links back to exact transcript evidence and the source recording.</p>
+      </div>
+      <div class="artifact-grid">
+        <article><h3>Recording package</h3><p>`recording-0001.mp3`, `recording-0001.json`, `recording-0001.md`, and `recording-0001.deep-analysis.md`.</p></article>
+        <article><h3>Core dashboard APIs</h3><p>`/api/dashboard/snapshot`, `/api/testing/report`, `/api/testing/next-call`, `/api/recordings`, and `/api/agents`.</p></article>
+        <article><h3>Twilio callbacks</h3><p>`/twilio/status`, `/twilio/stream-status`, `/twilio/recording-status`, and `/ws/twilio-media`.</p></article>
+        <article><h3>Scenario control API</h3><p>`POST /api/testing/active-runs/{call_sid}/scenario-transition` queues smooth next/select scenario nudges.</p></article>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

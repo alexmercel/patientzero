@@ -58,6 +58,14 @@ class RecordingFavoriteRequest(BaseModel):
     favorite: bool | None = None
 
 
+class ScenarioTransitionRequest(BaseModel):
+    """Manual active-scenario transition request."""
+
+    mode: str
+    target_scenario_id: str | None = None
+    reason: str | None = None
+
+
 class HealthResponse(BaseModel):
     """Basic health response."""
 

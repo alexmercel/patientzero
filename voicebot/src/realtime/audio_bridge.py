@@ -204,6 +204,14 @@ class AudioBridge:
             playback_marks_pending=len(self._pending_playback_marks),
         )
 
+    def queue_transition_nudge(self, nudge: str) -> bool:
+        """Queue a hidden scenario-transition nudge after representative audio settles."""
+        clean_nudge = str(nudge or "").strip()
+        if self._closed or not clean_nudge:
+            return False
+        self._queue_transition_nudge(clean_nudge)
+        return True
+
     async def _forward_gemini_audio(self) -> None:
         try:
             async for event in self.gemini_client.receive_events():

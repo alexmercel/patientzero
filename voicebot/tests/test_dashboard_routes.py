@@ -79,6 +79,52 @@ class FakeRecordingManager:
         return path
 
 
+class FakeBridge:
+    def __init__(self) -> None:
+        self.nudges: list[str] = []
+
+    def queue_transition_nudge(self, nudge: str) -> bool:
+        self.nudges.append(nudge)
+        return True
+
+
+class FakeRegistry:
+    def __init__(self, bridge: FakeBridge | None = None) -> None:
+        self.bridge = bridge
+
+    async def bridge_for_call(self, call_sid: str):
+        return self.bridge
+
+    async def register_websocket(self, websocket):
+        return None
+
+    async def unregister_websocket(self, websocket):
+        return None
+
+
+def test_root_serves_landing_and_dashboard_route_serves_dashboard(settings) -> None:
+    event_bus = DashboardEventBus()
+    app = FastAPI()
+    app.include_router(
+        build_dashboard_router(
+            settings,
+            FakeCallManager(),
+            event_bus,
+            FakeRecordingManager(),
+            TestCampaignManager(settings),
+        )
+    )
+    client = TestClient(app)
+
+    landing_response = client.get("/")
+    dashboard_response = client.get("/dashboard")
+
+    assert landing_response.status_code == 200
+    assert "PatientZero" in landing_response.text
+    assert dashboard_response.status_code == 200
+    assert "Live Call" in dashboard_response.text
+
+
 def test_dashboard_websocket_streams_events(settings) -> None:
     event_bus = DashboardEventBus()
     app = FastAPI()
@@ -145,6 +191,40 @@ def test_testing_report_and_start_call_routes(settings) -> None:
     assert start_response.json()["run_id"]
     assert start_response.json()["current_scenario"]["scenario_id"]
     assert start_response.json()["run_id"] == next_call_response.json()["run_id"]
+
+
+def test_active_run_scenario_transition_route_queues_bridge_nudge(settings) -> None:
+    event_bus = DashboardEventBus()
+    app = FastAPI()
+    manager = TestCampaignManager(settings)
+    bridge = FakeBridge()
+    app.include_router(
+        build_dashboard_router(
+            settings,
+            FakeCallManager(),
+            event_bus,
+            FakeRecordingManager(),
+            manager,
+            connection_registry=FakeRegistry(bridge),
+        )
+    )
+    client = TestClient(app)
+
+    start_response = client.post("/api/testing/start-call")
+    assert start_response.status_code == 200
+    call_sid = start_response.json()["call_sid"]
+
+    response = client.post(
+        f"/api/testing/active-runs/{call_sid}/scenario-transition",
+        json={"mode": "next", "reason": "test"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["ok"] is True
+    assert payload["transition_queued"] is True
+    assert payload["current_scenario"]["scenario_id"] != start_response.json()["current_scenario"]["scenario_id"]
+    assert bridge.nudges
 
 
 def test_testing_reset_route_clears_campaign_summary(settings) -> None:

@@ -96,12 +96,15 @@ def test_dashboard_page_is_served(settings) -> None:
     app = create_app(settings=settings, call_manager=FakeCallManager(), recording_manager=FakeRecordingManager())
     client = TestClient(app)
 
-    response = client.get("/")
+    landing_response = client.get("/")
+    dashboard_response = client.get("/dashboard")
 
-    assert response.status_code == 200
-    assert "Voicebot Control Room" in response.text
-    assert 'class="signal"' not in response.text
-    assert "Reset Scenario Progress" in response.text
+    assert landing_response.status_code == 200
+    assert "PatientZero" in landing_response.text
+    assert dashboard_response.status_code == 200
+    assert "Voicebot Control Room" in dashboard_response.text
+    assert 'class="signal"' not in dashboard_response.text
+    assert "Reset Scenario Progress" in dashboard_response.text
 
 
 def test_dashboard_assets_are_served(settings) -> None:
