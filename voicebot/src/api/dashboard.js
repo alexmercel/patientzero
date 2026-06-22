@@ -56,6 +56,8 @@ const recordingRelevantEvents = new Set([
 const testingRelevantEvents = new Set([
   "testing_run_started",
   "testing_progress_updated",
+  "testing_scenario_transition_requested",
+  "testing_scenario_transition_queued",
   "testing_campaign_reset",
   "testing_report_updated",
 ]);
@@ -86,6 +88,7 @@ const els = {
   metricTestedFail: document.getElementById("metric-tested-fail"),
   metricTestedPending: document.getElementById("metric-tested-pending"),
   transcriptList: document.getElementById("transcript-list"),
+  liveScenarioStrip: document.getElementById("live-scenario-strip"),
   logList: document.getElementById("log-list"),
   togglePackets: document.getElementById("toggle-packets"),
   personaSelect: document.getElementById("persona-select"),
@@ -246,6 +249,37 @@ function renderRecordingLinks(recordings) {
   `;
 }
 
+function renderScenarioTransitionControls(run) {
+  const scenarioPlan = run.scenario_plan || [];
+  if (!run.call_sid || scenarioPlan.length <= 1) {
+    return "";
+  }
+  const currentId = run.current_scenario?.scenario_id || "";
+  return `
+    <div class="scenario-transition-controls">
+      <button
+        class="secondary compact"
+        type="button"
+        data-scenario-transition="next"
+        data-call-sid="${escapeAttribute(run.call_sid)}"
+      >Next Scenario</button>
+      <select class="config-select compact-select" data-scenario-select="${escapeAttribute(run.call_sid)}" aria-label="Change active scenario">
+        ${scenarioPlan.map((scenario) => `
+          <option value="${escapeAttribute(scenario.scenario_id)}" ${scenario.scenario_id === currentId ? "selected" : ""}>
+            ${escapeHtml(scenario.scenario_id)} · ${escapeHtml(scenario.title || "Scenario")}
+          </option>
+        `).join("")}
+      </select>
+      <button
+        class="secondary compact"
+        type="button"
+        data-scenario-transition="select"
+        data-call-sid="${escapeAttribute(run.call_sid)}"
+      >Change Scenario</button>
+    </div>
+  `;
+}
+
 function renderRecordingActions(recording) {
   return `
     <div class="recording-actions">
@@ -359,14 +393,20 @@ function renderTesting() {
   if (!nextRunPreview || !(nextRunPreview.scenario_ids || []).length) {
     els.testingPreview.innerHTML = '<div class="empty">Next call preview unavailable.</div>';
   } else {
+    const planningMode = nextRunPreview.planning_mode || "campaign";
+    const isAutoExplore = planningMode === "auto_explore";
     els.testingPreview.innerHTML = `
       <article class="testing-card preview-card">
         <div class="testing-title">
           <strong>${escapeHtml(nextRunPreview.persona_name || nextRunPreview.persona_id || "persona")}</strong>
           <span class="chip">${escapeHtml(nextRunPreview.persona_id || "persona")}</span>
-          <span class="status-tag pending">${escapeHtml(String((nextRunPreview.scenario_ids || []).length))} Scenarios</span>
+          <span class="status-tag pending">${escapeHtml(isAutoExplore ? "Auto Explore" : "Campaign")}</span>
+          <span class="chip">${escapeHtml(String((nextRunPreview.scenario_ids || []).length))} Candidates</span>
         </div>
-        <div class="testing-copy">The next call will use this exact persona and scenario order.</div>
+        <div class="testing-copy">${escapeHtml(isAutoExplore
+          ? "The next call starts with this candidate pool, then follows the support flow and reorders scenarios when the conversation makes another boundary more relevant."
+          : "The next call will use this exact persona and scenario order."
+        )}</div>
         <div class="testing-grid">
           ${(nextRunPreview.scenario_plan || []).map((scenario, index) => renderPreviewScenarioCard(scenario, index)).join("")}
         </div>
@@ -400,6 +440,7 @@ rep turns=${escapeHtml(String(run.current_scenario.representative_turns_observed
             <div class="testing-ask-list">
               ${(run.current_scenario.ask || []).map((line) => `<div class="testing-ask-line">${escapeHtml(line)}</div>`).join("")}
             </div>
+            ${renderScenarioTransitionControls(run)}
           ` : '<div class="testing-mini-empty">Scenario progress is waiting for committed transcript turns.</div>'}
         </div>
         <div class="testing-stage">
@@ -470,6 +511,51 @@ rep turns=${escapeHtml(String(run.current_scenario.representative_turns_observed
       </div>
     </article>
   `;
+
+  if (els.scenarioChecklist) {
+    for (const result of scenarioResults) {
+      if (!result.tested && result.outcome === 'pending') continue;
+      const checkbox = els.scenarioChecklist.querySelector(`input[value="${escapeAttribute(result.scenario_id)}"]`);
+      if (checkbox) {
+        const itemDiv = checkbox.closest('.scenario-check-item');
+        if (itemDiv) {
+          itemDiv.classList.remove('scenario-outcome-pass', 'scenario-outcome-fail', 'scenario-outcome-pending');
+          itemDiv.classList.add(`scenario-outcome-${result.outcome}`);
+          
+          let badge = itemDiv.querySelector('.outcome-badge');
+          if (!badge) {
+             badge = document.createElement('span');
+             itemDiv.appendChild(badge);
+          }
+          badge.className = `outcome-badge ${result.outcome}`;
+          badge.textContent = result.outcome;
+        }
+      }
+    }
+  }
+}
+
+function renderLiveScenario() {
+  if (!els.liveScenarioStrip) return;
+  const run = (state.testing.active_runs || [])[0];
+  const scenario = run?.current_scenario || null;
+  if (!run || !scenario) {
+    els.liveScenarioStrip.innerHTML = `
+      <div class="live-scenario-empty">
+        <span>No active scenario</span>
+      </div>
+    `;
+    return;
+  }
+
+  els.liveScenarioStrip.innerHTML = `
+    <div class="live-scenario-copy">
+      <span class="chip">Scenario ${escapeHtml(String(scenario.sequence || 1))}/${escapeHtml(String(scenario.total || 1))}</span>
+      <strong>${escapeHtml(scenario.scenario_id)} · ${escapeHtml(scenario.title || "Scenario")}</strong>
+      <span class="status-tag pending">${escapeHtml(formatScenarioStatus(scenario.status))}</span>
+    </div>
+    ${renderScenarioTransitionControls(run)}
+  `;
 }
 
 function currentLiveCall() {
@@ -483,6 +569,7 @@ function render() {
   renderCalls();
   renderRecordings();
   renderTesting();
+  renderLiveScenario();
   renderLogs();
 }
 
@@ -556,6 +643,7 @@ async function loadTestingReport() {
   if (!response.ok) throw new Error(`testing report failed: ${response.status}`);
   applyTestingReport(await response.json());
   renderTesting();
+  renderLiveScenario();
 }
 
 function getSelectedPersonaId() {
@@ -680,6 +768,7 @@ function renderSelectors() {
 
     els.scenarioChecklist.addEventListener("change", updateScenarioHint);
     updateScenarioHint();
+    renderTesting();
   }
 }
 
@@ -740,6 +829,32 @@ async function resetTestingCampaign() {
   } finally {
     els.testingReset.disabled = false;
   }
+}
+
+async function transitionScenario(callSid, mode, targetScenarioId = null) {
+  if (!callSid || !mode) return;
+  els.statusNote.textContent = mode === "next"
+    ? "Queuing next scenario..."
+    : "Queuing selected scenario...";
+
+  const response = await fetch(`/api/testing/active-runs/${encodeURIComponent(callSid)}/scenario-transition`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      mode,
+      target_scenario_id: targetScenarioId,
+      reason: "operator_dashboard",
+    }),
+  });
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload.detail || "scenario transition failed");
+  }
+  els.statusNote.textContent = payload.transition_queued
+    ? "Scenario transition queued after the representative finishes speaking."
+    : "Scenario state updated. Live bridge was not available to nudge Gemini.";
+  await loadSnapshot();
+  await loadTestingReport();
 }
 
 async function hangupCall() {
@@ -1039,6 +1154,52 @@ els.recordingList.addEventListener("click", (event) => {
     els.statusNote.textContent = `Favorite update failed: ${error.message}`;
   });
 });
+els.testingActiveRuns.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) {
+    return;
+  }
+  const button = target.closest("[data-scenario-transition]");
+  if (!(button instanceof HTMLButtonElement)) {
+    return;
+  }
+  const callSid = button.dataset.callSid || "";
+  const mode = button.dataset.scenarioTransition || "";
+  const select = document.querySelector(`[data-scenario-select="${CSS.escape(callSid)}"]`);
+  const targetScenarioId = mode === "select" && select instanceof HTMLSelectElement ? select.value : null;
+  button.disabled = true;
+  transitionScenario(callSid, mode, targetScenarioId)
+    .catch((error) => {
+      els.statusNote.textContent = `Scenario transition failed: ${error.message}`;
+    })
+    .finally(() => {
+      button.disabled = false;
+    });
+});
+if (els.liveScenarioStrip) {
+  els.liveScenarioStrip.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    const button = target.closest("[data-scenario-transition]");
+    if (!(button instanceof HTMLButtonElement)) {
+      return;
+    }
+    const callSid = button.dataset.callSid || "";
+    const mode = button.dataset.scenarioTransition || "";
+    const select = els.liveScenarioStrip.querySelector(`[data-scenario-select="${CSS.escape(callSid)}"]`);
+    const targetScenarioId = mode === "select" && select instanceof HTMLSelectElement ? select.value : null;
+    button.disabled = true;
+    transitionScenario(callSid, mode, targetScenarioId)
+      .catch((error) => {
+        els.statusNote.textContent = `Scenario transition failed: ${error.message}`;
+      })
+      .finally(() => {
+        button.disabled = false;
+      });
+  });
+}
 
 for (const button of els.tabButtons) {
   button.addEventListener("click", () => setActiveTab(button.dataset.tab));

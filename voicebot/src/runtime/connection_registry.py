@@ -16,6 +16,7 @@ class ConnectionRegistry:
         self.shutdown_event = asyncio.Event()
         self._websockets: set[Any] = set()
         self._bridges: set[Any] = set()
+        self._bridges_by_call_sid: dict[str, Any] = {}
         self._lock = asyncio.Lock()
 
     async def register_websocket(self, websocket: Any) -> None:
@@ -29,10 +30,24 @@ class ConnectionRegistry:
     async def register_bridge(self, bridge: Any) -> None:
         async with self._lock:
             self._bridges.add(bridge)
+            call_sid = str(getattr(getattr(bridge, "session_state", None), "call_sid", "") or "").strip()
+            if call_sid:
+                self._bridges_by_call_sid[call_sid] = bridge
 
     async def unregister_bridge(self, bridge: Any) -> None:
         async with self._lock:
             self._bridges.discard(bridge)
+            call_sid = str(getattr(getattr(bridge, "session_state", None), "call_sid", "") or "").strip()
+            if call_sid and self._bridges_by_call_sid.get(call_sid) is bridge:
+                self._bridges_by_call_sid.pop(call_sid, None)
+
+    async def bridge_for_call(self, call_sid: str) -> Any | None:
+        """Return the active audio bridge for a Twilio call SID, if present."""
+        clean_call_sid = str(call_sid or "").strip()
+        if not clean_call_sid:
+            return None
+        async with self._lock:
+            return self._bridges_by_call_sid.get(clean_call_sid)
 
     async def close_all(self) -> None:
         """Close all tracked bridges and websockets during shutdown."""
@@ -52,6 +67,10 @@ class ConnectionRegistry:
                         "connection_registry_bridge_close_failed",
                         error=str(result),
                     )
+
+        async with self._lock:
+            self._bridges.clear()
+            self._bridges_by_call_sid.clear()
 
         if websockets:
             websocket_results = await asyncio.gather(

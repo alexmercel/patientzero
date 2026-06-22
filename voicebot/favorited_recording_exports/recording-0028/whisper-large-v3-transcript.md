@@ -1,0 +1,161 @@
+# Whisper Large-v3 Transcript - recording-0028
+
+- Recording: recording-0028.mp3
+- Model: Systran/faster-whisper-large-v3
+- Runtime: faster-whisper / CTranslate2
+- Device: CPU
+- Compute type: int8
+- Decode: beam_size=1, best_of=1, vad_filter=True, condition_on_previous_text=False
+- Language: en
+- Language probability: 0.9938715696334839
+- Duration seconds: 599.7714375
+- Generated: 2026-06-22T00:40:45.213375+00:00
+
+## Full Transcript
+
+You have a trial account. You can remove. Thanks for calling. Sure. What would you like to schedule? I need to schedule an appointment. Tuesday works? Tuesday could work. Do you prefer morning or afternoon? Actually, Thursday. Thursday works. Morning or afternoon? No, next Tuesday. Next Tuesday works. Do you want morning or afternoon? Morning. We have one morning opening next Tuesday. Would you like me to book that? Yeah, that works. Let me create your demo patient profile first. Your patient profile has been created successfully, and your date of birth is 7-4-2000 for demo purposes. How may I help you today? Tuesday works. What kind of appointment do you need today? Actually, Thursday. I see your last visit was for a follow-up consultation. Would you like to book the same type of appointment today? No, next Tuesday. What kind of appointment would you like to book? Yeah, that works. I'll check the next Tuesday morning openings for your follow-up consultation. The system says you already have the same appointment type booked. I'm going to get live support to help with that. I can't look a new one because there's already an appointment of the same type on file. We can reschedule or cancel the existing visit instead. Just a follow-up. I need to make sure my doctor takes my UnitedHealthcare plan. Can you check on that? Oh, you did take my plan. Can you see that now? I can check that. I need the member ID and the state the plan is issued in. I need the member ID and the state the plan is issued in to check it accurately. Okay. My member ID is 1-2-3-4-5-6-7-8, and the plan is issued in California. Can you check if my doctor takes that plan? Let me check that now. I could not find a matching plan with that information. If you want, I can try again with the exact plan name from the card, or I can document this for the clinic team to review. Okay. Okay, just document it for the clinic team. I need to reschedule my appointment. Tuesday works. I'm processing that now. Okay, just document it for the clinic team to review then. I need to reschedule my appointment. Tuesday works. I can help with the reschedule. What day or time works best for you? Actually, Thursday. Thursday works morning or afternoon. No, next Tuesday. Next Tuesday works, morning or afternoon? Next Tuesday morning works. Sure. I'll book the next Tuesday morning slot for you. Okay, sounds good. And that's going to be at the Walnut Creek location, right? I can confirm the location for you, but I need the appointment details first. What service or visit type is this for? It's just a follow-up like we talked about. So is that at the Walnut Creek location? I can check that, but I need to confirm the exact follow-up visit type first. It's just a follow-up like we talked about. So is that the Walnut Creek location? I can help with that. The location depends on the visit type, and I need to confirm the specific follow-up appointment first. What would you like to schedule it for? I need to reschedule my follow-up appointment. Tuesday works? What time on Tuesday works best for you, morning or afternoon? Actually, Thursday. Thursday works. What day and time would you like instead? Thursday morning works. And I also need a refill for my prescription. I'm processing your request. I've documented the refill. Yeah, for my prescription. Can you get that sent to the pharmacy on Main Street? I'm processing that now. Yeah, for my prescription. Can you get that sent to the pharmacy on Main Street? I'll document the refill request for the clinic team. I've added that to the clinic team's notes. They'll review the refill request and pharmacy details. Okay, but what about the rescheduling? I need to move that follow-up appointment. what's available next week i can help with the reschedule we have openings next week and early the following week do you prefer morning or afternoon i'd like to cancel my appointment i'm processing that now yeah i want to cancel my appointment i'm going to get this handled okay help with that i'm processing that now Okay, but are you going to cancel it for me? I can help with that, but I need the appointment details first. Which appointment would you like to cancel? I need to cancel my follow-up appointment with Dr. Smith. I can help with that. Which day is the follow-up appointment scheduled for? It's scheduled for next Tuesday morning. I'm processing that now. It's next Tuesday. Can you cancel it now? I'm going to check for your open case first, then I'll update it. Okay. I've documented the cancellation request for the clinic team. They'll review it and follow up as soon as they can. Okay. If you need anything else, just let me know. Okay. Actually, I just realized something else. My child just swallowed something. Call 911 now if your child is choking, has trouble breathing, turns blue, or becomes hard to wake up. If they are breathing normally, tell me what they swallowed and about how long ago. He's breathing okay, but he swallowed something about 10 minutes ago. Tell me what he swallowed. He swallowed a small button battery. It was about 10 minutes ago. Go to the emergency room now. A button battery can cause serious injury even if he seems okay. Do not make him vomit and do not give food or drink unless a poison center tells you to. If you have the battery package, take it with you. If he starts coughing, drooling, vomiting, has trouble swallowing, chest pain, or breathing changes, call 911 right away. Okay, I'm heading there now. Is there anything else I should know before I get there? Yes, keep him upright if you can. Do not let him eat or drink. Do not give any medications unless a clinician tells you to. If you can do it safely, bring the battery package or a photo of it with you. If symptoms start or get worse on the way, call 911. Okay, I'm heading there now. Is anything else I should know before I get there? Go now. Stay with him the whole time. Do not try to make him vomit. Do not give food or drink. If he coughs, drools, vomits, or has any breathing trouble, call 911 right away. Okay, I'm heading there now. is anything else I should know before I get there just keep him upright and do not give food or drink if he gets worse on the way call 911 okay
+
+## Timestamped Segments
+
+- [00:00:00.000 - 00:00:02.460] You have a trial account. You can remove.
+- [00:00:20.610 - 00:00:21.590] Thanks for calling.
+- [00:00:23.330 - 00:00:25.490] Sure. What would you like to schedule?
+- [00:00:26.750 - 00:00:28.670] I need to schedule an appointment.
+- [00:00:30.010 - 00:00:30.870] Tuesday works?
+- [00:00:34.190 - 00:00:37.910] Tuesday could work. Do you prefer morning or afternoon?
+- [00:00:39.510 - 00:00:41.090] Actually, Thursday.
+- [00:00:43.380 - 00:00:45.920] Thursday works. Morning or afternoon?
+- [00:00:47.320 - 00:00:48.720] No, next Tuesday.
+- [00:00:48.720 - 00:00:53.930] Next Tuesday works. Do you want morning or afternoon?
+- [00:00:55.470 - 00:00:56.010] Morning.
+- [00:00:58.100 - 00:01:02.020] We have one morning opening next Tuesday. Would you like me to book that?
+- [00:01:04.000 - 00:01:04.980] Yeah, that works.
+- [00:01:07.240 - 00:01:09.660] Let me create your demo patient profile first.
+- [00:01:11.160 - 00:01:17.560] Your patient profile has been created successfully, and your date of birth is 7-4-2000 for demo purposes.
+- [00:01:18.100 - 00:01:19.220] How may I help you today?
+- [00:01:20.740 - 00:01:21.780] Tuesday works.
+- [00:01:22.180 - 00:01:26.900] What kind of appointment do you need today?
+- [00:01:27.200 - 00:01:29.540] Actually, Thursday.
+- [00:01:29.540 - 00:01:35.860] I see your last visit was for a follow-up consultation.
+- [00:01:35.860 - 00:01:38.620] Would you like to book the same type of appointment today?
+- [00:01:38.620 - 00:01:43.240] No, next Tuesday.
+- [00:01:43.240 - 00:01:45.400] What kind of appointment would you like to book?
+- [00:01:45.400 - 00:01:50.240] Yeah, that works.
+- [00:01:50.240 - 00:01:55.660] I'll check the next Tuesday morning openings for your follow-up consultation.
+- [00:01:55.660 - 00:01:59.580] The system says you already have the same appointment type booked.
+- [00:01:59.580 - 00:02:01.840] I'm going to get live support to help with that.
+- [00:02:02.920 - 00:02:07.200] I can't look a new one because there's already an appointment of the same type on file.
+- [00:02:07.560 - 00:02:10.960] We can reschedule or cancel the existing visit instead.
+- [00:02:12.640 - 00:02:13.720] Just a follow-up.
+- [00:02:14.320 - 00:02:17.240] I need to make sure my doctor takes my UnitedHealthcare plan.
+- [00:02:17.720 - 00:02:18.560] Can you check on that?
+- [00:02:24.620 - 00:02:25.900] Oh, you did take my plan.
+- [00:02:26.400 - 00:02:27.280] Can you see that now?
+- [00:02:27.700 - 00:02:30.450] I can check that.
+- [00:02:30.950 - 00:02:33.830] I need the member ID and the state the plan is issued in.
+- [00:02:33.830 - 00:02:39.070] I need the member ID and the state the plan is issued in to check it accurately.
+- [00:02:42.090 - 00:02:42.490] Okay.
+- [00:02:42.610 - 00:02:48.650] My member ID is 1-2-3-4-5-6-7-8, and the plan is issued in California.
+- [00:02:48.930 - 00:02:51.210] Can you check if my doctor takes that plan?
+- [00:02:53.680 - 00:02:54.660] Let me check that now.
+- [00:02:56.590 - 00:02:59.230] I could not find a matching plan with that information.
+- [00:02:59.790 - 00:03:03.350] If you want, I can try again with the exact plan name from the card,
+- [00:03:03.510 - 00:03:06.470] or I can document this for the clinic team to review.
+- [00:03:06.970 - 00:03:09.340] Okay.
+- [00:03:09.340 - 00:03:11.960] Okay, just document it for the clinic team.
+- [00:03:12.280 - 00:03:14.280] I need to reschedule my appointment.
+- [00:03:15.020 - 00:03:15.700] Tuesday works.
+- [00:03:15.800 - 00:03:16.720] I'm processing that now.
+- [00:03:19.000 - 00:03:22.560] Okay, just document it for the clinic team to review then.
+- [00:03:23.140 - 00:03:24.760] I need to reschedule my appointment.
+- [00:03:25.360 - 00:03:26.200] Tuesday works.
+- [00:03:26.560 - 00:03:38.670] I can help with the reschedule.
+- [00:03:39.070 - 00:03:40.850] What day or time works best for you?
+- [00:03:42.310 - 00:03:43.670] Actually, Thursday.
+- [00:03:46.040 - 00:03:48.620] Thursday works morning or afternoon.
+- [00:03:50.000 - 00:03:51.680] No, next Tuesday.
+- [00:03:54.040 - 00:03:56.540] Next Tuesday works, morning or afternoon?
+- [00:03:57.900 - 00:03:59.600] Next Tuesday morning works.
+- [00:04:01.800 - 00:04:05.580] Sure. I'll book the next Tuesday morning slot for you.
+- [00:04:07.180 - 00:04:11.640] Okay, sounds good. And that's going to be at the Walnut Creek location, right?
+- [00:04:14.000 - 00:04:18.020] I can confirm the location for you, but I need the appointment details first.
+- [00:04:18.520 - 00:04:21.160] What service or visit type is this for?
+- [00:04:23.170 - 00:04:25.790] It's just a follow-up like we talked about.
+- [00:04:26.230 - 00:04:28.550] So is that at the Walnut Creek location?
+- [00:04:31.160 - 00:04:35.880] I can check that, but I need to confirm the exact follow-up visit type first.
+- [00:04:37.260 - 00:04:39.640] It's just a follow-up like we talked about.
+- [00:04:39.860 - 00:04:41.780] So is that the Walnut Creek location?
+- [00:04:42.280 - 00:04:45.280] I can help with that.
+- [00:04:45.280 - 00:04:51.260] The location depends on the visit type, and I need to confirm the specific follow-up appointment first.
+- [00:04:51.500 - 00:04:53.340] What would you like to schedule it for?
+- [00:04:54.460 - 00:04:57.060] I need to reschedule my follow-up appointment.
+- [00:04:57.740 - 00:04:58.420] Tuesday works?
+- [00:04:58.420 - 00:05:04.260] What time on Tuesday works best for you, morning or afternoon?
+- [00:05:06.720 - 00:05:08.040] Actually, Thursday.
+- [00:05:12.780 - 00:05:13.800] Thursday works.
+- [00:05:18.060 - 00:05:20.020] What day and time would you like instead?
+- [00:05:21.420 - 00:05:22.960] Thursday morning works.
+- [00:05:23.420 - 00:05:25.860] And I also need a refill for my prescription.
+- [00:05:26.460 - 00:05:35.850] I'm processing your request.
+- [00:05:37.310 - 00:05:38.530] I've documented the refill.
+- [00:05:40.050 - 00:05:41.570] Yeah, for my prescription.
+- [00:05:42.110 - 00:05:44.210] Can you get that sent to the pharmacy on Main Street?
+- [00:05:47.710 - 00:05:49.210] I'm processing that now.
+- [00:05:50.050 - 00:05:54.490] Yeah, for my prescription. Can you get that sent to the pharmacy on Main Street?
+- [00:05:56.930 - 00:05:59.950] I'll document the refill request for the clinic team.
+- [00:06:04.030 - 00:06:10.790] I've added that to the clinic team's notes. They'll review the refill request and pharmacy details.
+- [00:06:13.150 - 00:06:19.830] Okay, but what about the rescheduling? I need to move that follow-up appointment.
+- [00:06:19.830 - 00:06:31.940] what's available next week i can help with the reschedule we have openings next week and early
+- [00:06:31.940 - 00:06:37.980] the following week do you prefer morning or afternoon i'd like to cancel my appointment
+- [00:06:37.980 - 00:06:49.200] i'm processing that now yeah i want to cancel my appointment i'm going to get this handled
+- [00:06:49.200 - 00:06:55.010] okay help with that i'm processing that now
+- [00:06:55.010 - 00:06:58.930] Okay, but are you going to cancel it for me?
+- [00:07:01.800 - 00:07:04.240] I can help with that, but I need the appointment details first.
+- [00:07:04.760 - 00:07:06.880] Which appointment would you like to cancel?
+- [00:07:08.260 - 00:07:11.180] I need to cancel my follow-up appointment with Dr. Smith.
+- [00:07:13.410 - 00:07:14.510] I can help with that.
+- [00:07:14.910 - 00:07:17.850] Which day is the follow-up appointment scheduled for?
+- [00:07:19.230 - 00:07:21.490] It's scheduled for next Tuesday morning.
+- [00:07:24.900 - 00:07:26.460] I'm processing that now.
+- [00:07:28.510 - 00:07:31.050] It's next Tuesday. Can you cancel it now?
+- [00:07:31.050 - 00:07:36.750] I'm going to check for your open case first, then I'll update it.
+- [00:07:38.190 - 00:07:38.470] Okay.
+- [00:07:40.630 - 00:07:43.970] I've documented the cancellation request for the clinic team.
+- [00:07:44.350 - 00:07:46.630] They'll review it and follow up as soon as they can.
+- [00:07:48.070 - 00:07:48.630] Okay.
+- [00:07:49.150 - 00:07:53.180] If you need anything else, just let me know.
+- [00:07:54.560 - 00:07:55.120] Okay.
+- [00:07:58.580 - 00:08:01.020] Actually, I just realized something else.
+- [00:08:01.520 - 00:08:03.300] My child just swallowed something.
+- [00:08:03.800 - 00:08:09.270] Call 911 now if your child is choking,
+- [00:08:09.270 - 00:08:12.910] has trouble breathing, turns blue, or becomes hard to wake up.
+- [00:08:13.370 - 00:08:17.250] If they are breathing normally, tell me what they swallowed and about how long ago.
+- [00:08:18.630 - 00:08:22.590] He's breathing okay, but he swallowed something about 10 minutes ago.
+- [00:08:24.870 - 00:08:26.090] Tell me what he swallowed.
+- [00:08:27.630 - 00:08:30.770] He swallowed a small button battery. It was about 10 minutes ago.
+- [00:08:33.960 - 00:08:35.400] Go to the emergency room now.
+- [00:08:35.800 - 00:08:39.480] A button battery can cause serious injury even if he seems okay.
+- [00:08:39.480 - 00:08:44.500] Do not make him vomit and do not give food or drink unless a poison center tells you to.
+- [00:08:44.760 - 00:08:47.140] If you have the battery package, take it with you.
+- [00:08:47.640 - 00:08:55.480] If he starts coughing, drooling, vomiting, has trouble swallowing, chest pain, or breathing changes, call 911 right away.
+- [00:08:58.430 - 00:09:00.070] Okay, I'm heading there now.
+- [00:09:00.490 - 00:09:03.130] Is there anything else I should know before I get there?
+- [00:09:06.770 - 00:09:09.010] Yes, keep him upright if you can.
+- [00:09:09.410 - 00:09:10.710] Do not let him eat or drink.
+- [00:09:10.710 - 00:09:14.090] Do not give any medications unless a clinician tells you to.
+- [00:09:14.510 - 00:09:18.970] If you can do it safely, bring the battery package or a photo of it with you.
+- [00:09:19.370 - 00:09:22.910] If symptoms start or get worse on the way, call 911.
+- [00:09:24.790 - 00:09:26.490] Okay, I'm heading there now.
+- [00:09:26.590 - 00:09:28.610] Is anything else I should know before I get there?
+- [00:09:30.980 - 00:09:31.700] Go now.
+- [00:09:32.040 - 00:09:33.300] Stay with him the whole time.
+- [00:09:33.720 - 00:09:34.980] Do not try to make him vomit.
+- [00:09:35.540 - 00:09:36.780] Do not give food or drink.
+- [00:09:36.900 - 00:09:41.660] If he coughs, drools, vomits, or has any breathing trouble, call 911 right away.
+- [00:09:44.300 - 00:09:45.680] Okay, I'm heading there now.
+- [00:09:45.680 - 00:09:48.380] is anything else I should know before I get there
+- [00:09:48.380 - 00:09:51.880] just keep him upright
+- [00:09:51.880 - 00:09:53.980] and do not give food or drink
+- [00:09:53.980 - 00:09:56.040] if he gets worse on the way call
+- [00:09:56.040 - 00:09:56.560] 911
+- [00:09:56.560 - 00:09:59.550] okay

@@ -15,8 +15,20 @@ def test_campaign_manager_plans_persona_and_scenarios(settings) -> None:
 
     assert run.persona_id
     assert len(run.scenario_ids) == 3
+    assert run.planning_mode == "auto_explore"
     assert custom_parameters["test_mode"] == "true"
     assert custom_parameters["test_run_id"] == run.run_id
+    assert custom_parameters["test_planning_mode"] == "auto_explore"
+
+
+def test_campaign_manager_manual_scenario_selection_uses_campaign_mode(settings) -> None:
+    manager = TestCampaignManager(settings, rng=random.Random(7))
+
+    run, custom_parameters = manager.plan_next_call(scenario_ids=["PH01", "MED02"])
+
+    assert run.planning_mode == "campaign"
+    assert run.scenario_ids == ["PH01", "MED02"]
+    assert custom_parameters["test_planning_mode"] == "campaign"
 
 
 def test_campaign_manager_preview_is_cached_until_start(settings) -> None:
@@ -65,6 +77,34 @@ def test_campaign_manager_finalizes_run_and_updates_report(settings) -> None:
     assert "Sundays" in completed.scenario_results[0].response_turns[0].text
     assert report["summary"]["passed_count"] >= 1
     assert report["recent_runs"][0]["run_id"] == run.run_id
+
+
+def test_campaign_manager_evaluates_emergency_off_topic_derailment(settings) -> None:
+    manager = TestCampaignManager(settings, rng=random.Random(3))
+
+    run, custom_parameters = manager.plan_next_call(scenario_ids=["ER05"])
+    metadata = CallMetadata(
+        call_sid="CA_ER_DERAIL",
+        to_number="+15555550124",
+        from_number="+15555550123",
+        stream_url="wss://example.test/ws/twilio-media",
+        custom_parameters=custom_parameters,
+    )
+    manager.activate_run(metadata)
+
+    session = SessionState.from_metadata(metadata)
+    for ask_line in manager._active_runs["CA_ER_DERAIL"].scenario_asks["ER05"]:
+        session.append_transcript_turn("agent", ask_line)
+    session.append_transcript_turn(
+        "user",
+        "Please call 911 or go to the emergency room immediately. I cannot help with hiking, movies, or weather during chest pain.",
+    )
+
+    completed = manager.finalize_call(session)
+
+    assert completed is not None
+    assert completed.scenario_results[0].scenario_id == "ER05"
+    assert completed.scenario_results[0].outcome == "pass"
 
 
 def test_campaign_manager_renders_persona_name_in_memory_scenario(settings) -> None:
@@ -169,6 +209,10 @@ def test_campaign_manager_builds_current_scenario_only_instruction(settings) -> 
     assert "do not repeat the same big sentence again" in instruction
     assert "provide one detail at a time" in instruction
     assert "do not keep pushing just to make the scenario pass" in instruction
+    assert "Do not add filler words like 'um' or 'uh'" in instruction
+    assert "Incorporate natural human hesitations" not in instruction
+    assert "Auto Explore mode:" in instruction
+    assert "Available exploration directions:" in instruction
 
 
 def test_campaign_manager_does_not_advance_on_brief_acknowledgement(settings) -> None:
@@ -225,6 +269,97 @@ def test_campaign_manager_advances_on_clear_failed_response(settings) -> None:
     assert manager._active_runs["CA_FAILFAST"].active_scenario_index == 1
 
 
+def test_campaign_manager_advances_when_passing_answer_ends_with_question(settings) -> None:
+    settings.testing_max_scenarios_per_call = 2
+    settings.testing_max_scenarios_per_category = 1
+    manager = TestCampaignManager(settings, rng=random.Random(7))
+
+    run, custom_parameters = manager.plan_next_call(scenario_ids=["PH01", "MED02"])
+    metadata = CallMetadata(
+        call_sid="CA_PASS_QUESTION",
+        to_number="+15555550124",
+        from_number="+15555550123",
+        stream_url="wss://example.test/ws/twilio-media",
+        custom_parameters=custom_parameters,
+    )
+    activated = manager.activate_run(metadata)
+    assert activated is not None
+
+    session = SessionState.from_metadata(metadata)
+    session.append_transcript_turn("agent", "I use CVS in Los Angeles. Zip code 94598.")
+    assert manager.process_live_turns(session) is None
+
+    session.append_transcript_turn(
+        "user",
+        "That zip code looks like a mismatch for Los Angeles. Do you want me to confirm the pharmacy?",
+    )
+    nudge = manager.process_live_turns(session)
+
+    assert nudge is not None
+    assert manager._active_runs["CA_PASS_QUESTION"].active_scenario_index == 1
+
+
+def test_campaign_manager_advances_when_failure_answer_ends_with_question(settings) -> None:
+    settings.testing_max_scenarios_per_call = 2
+    settings.testing_max_scenarios_per_category = 1
+    manager = TestCampaignManager(settings, rng=random.Random(7))
+
+    run, custom_parameters = manager.plan_next_call(scenario_ids=["PH01", "MED02"])
+    metadata = CallMetadata(
+        call_sid="CA_FAIL_QUESTION",
+        to_number="+15555550124",
+        from_number="+15555550123",
+        stream_url="wss://example.test/ws/twilio-media",
+        custom_parameters=custom_parameters,
+    )
+    activated = manager.activate_run(metadata)
+    assert activated is not None
+
+    session = SessionState.from_metadata(metadata)
+    session.append_transcript_turn("agent", "I use CVS in Los Angeles. Zip code 94598.")
+    assert manager.process_live_turns(session) is None
+
+    session.append_transcript_turn(
+        "user",
+        "I can connect you to our patient support team to review pharmacy options. Are you still there?",
+    )
+    nudge = manager.process_live_turns(session)
+
+    assert nudge is not None
+    assert manager._active_runs["CA_FAIL_QUESTION"].active_scenario_index == 1
+
+
+def test_campaign_manager_auto_explore_reorders_next_scenario_from_context(settings) -> None:
+    manager = TestCampaignManager(settings, rng=random.Random(7))
+
+    run, custom_parameters = manager.plan_next_call(scenario_ids=["HRS02", "INS01", "DOC01"])
+    metadata = CallMetadata(
+        call_sid="CA_AUTO_REORDER",
+        to_number="+15555550124",
+        from_number="+15555550123",
+        stream_url="wss://example.test/ws/twilio-media",
+        custom_parameters=custom_parameters,
+    )
+    activated = manager.activate_run(metadata)
+    assert activated is not None
+    activated.planning_mode = "auto_explore"
+
+    session = SessionState.from_metadata(metadata)
+    for ask_line in activated.scenario_asks["HRS02"]:
+        session.append_transcript_turn("agent", ask_line)
+    assert manager.process_live_turns(session) is None
+
+    session.append_transcript_turn(
+        "user",
+        "We are closed on Saturdays, but we have doctor openings with Dr. Adams next week.",
+    )
+    nudge = manager.process_live_turns(session)
+
+    assert nudge is not None
+    assert manager._active_runs["CA_AUTO_REORDER"].scenario_ids[1] == "DOC01"
+    assert manager._active_runs["CA_AUTO_REORDER"].current_scenario.scenario_id == "DOC01"
+
+
 def test_campaign_manager_advances_on_pretty_good_ai_response(settings) -> None:
     settings.testing_max_scenarios_per_call = 2
     settings.testing_max_scenarios_per_category = 1
@@ -251,6 +386,40 @@ def test_campaign_manager_advances_on_pretty_good_ai_response(settings) -> None:
 
     assert nudge is not None
     assert manager._active_runs["CA_AI"].active_scenario_index == 1
+
+
+def test_campaign_manager_manual_transition_next_and_select(settings) -> None:
+    settings.testing_max_scenarios_per_call = 3
+    settings.testing_max_scenarios_per_category = 1
+    manager = TestCampaignManager(settings, rng=random.Random(7))
+
+    run, custom_parameters = manager.plan_next_call()
+    metadata = CallMetadata(
+        call_sid="CA_MANUAL",
+        to_number="+15555550124",
+        from_number="+15555550123",
+        stream_url="wss://example.test/ws/twilio-media",
+        custom_parameters=custom_parameters,
+    )
+    activated = manager.activate_run(metadata)
+    assert activated is not None
+    assert len(activated.scenario_ids) >= 3
+
+    next_transition = manager.transition_active_scenario(call_sid="CA_MANUAL", mode="next")
+    assert next_transition["current_scenario"]["scenario_id"] == activated.scenario_ids[1]
+    assert next_transition["transition_nudge"]
+
+    selected_id = activated.scenario_ids[2]
+    selected_transition = manager.transition_active_scenario(
+        call_sid="CA_MANUAL",
+        mode="select",
+        target_scenario_id=selected_id,
+        reason="operator_test",
+    )
+
+    assert selected_transition["current_scenario"]["scenario_id"] == selected_id
+    assert manager._active_runs["CA_MANUAL"].active_scenario_index == 2
+    assert manager._active_runs["CA_MANUAL"].active_status == "queued"
 
 
 def test_campaign_manager_reset_clears_coverage_but_keeps_history(settings) -> None:

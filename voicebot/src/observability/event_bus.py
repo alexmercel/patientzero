@@ -8,22 +8,25 @@ from datetime import UTC, datetime
 from itertools import count
 from typing import Any
 
-from voicebot.src.observability.transcript_store import TranscriptStore
+from voicebot.src.agents.transcript_agent import TranscriptAgent
 
 
 class DashboardEventBus:
     """Stores recent events and fans them out to live subscribers."""
 
-    def __init__(self, max_events: int = 500, subscriber_queue_size: int = 200) -> None:
+    def __init__(
+        self,
+        max_events: int = 500,
+        subscriber_queue_size: int = 200,
+        transcript_agent: TranscriptAgent | None = None,
+    ) -> None:
         self.max_events = max_events
         self.subscriber_queue_size = subscriber_queue_size
         self._events: deque[dict[str, Any]] = deque(maxlen=max_events)
         self._subscribers: dict[int, asyncio.Queue[dict[str, Any]]] = {}
         self._event_ids = count(1)
         self._subscriber_ids = count(1)
-        self._transcript_store = TranscriptStore()
-        self._active_call_sid: str | None = None
-        self._transcript_session_open = True
+        self._transcript_agent = transcript_agent or TranscriptAgent()
 
     def publish(self, kind: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Store an event and send it to all active subscribers."""
@@ -35,11 +38,10 @@ class DashboardEventBus:
         }
         if kind == "log":
             transcript_update = None
-            if self._should_ingest_transcript_event(event["payload"]):
-                transcript_update = self._transcript_store.ingest_log_event(
-                    event["payload"],
-                    fallback_timestamp=event["timestamp"],
-                )
+            transcript_update = self._transcript_agent.ingest_log_event(
+                event["payload"],
+                fallback_timestamp=event["timestamp"],
+            )
             if transcript_update is not None:
                 event["payload"]["transcript_message"] = transcript_update["message"]
                 if transcript_update["replaces_id"] is not None:
@@ -73,7 +75,7 @@ class DashboardEventBus:
 
     def transcript_messages(self) -> list[dict[str, Any]]:
         """Return the full stored transcript history."""
-        return self._transcript_store.messages()
+        return self._transcript_agent.transcript_messages()
 
     def begin_call(self, call_sid: str) -> dict[str, Any] | None:
         """Start a fresh transcript session for a newly-active call."""
@@ -81,16 +83,8 @@ class DashboardEventBus:
         if not clean_call_sid:
             return None
 
-        should_reset = (
-            clean_call_sid != self._active_call_sid
-            or self._transcript_store.has_messages()
-        )
-        self._active_call_sid = clean_call_sid
-        self._transcript_session_open = True
-        if not should_reset:
+        if not self._transcript_agent.begin_call(clean_call_sid):
             return None
-
-        self._transcript_store.reset()
         return self.publish(
             "state",
             {
@@ -103,18 +97,10 @@ class DashboardEventBus:
     def end_call(self, call_sid: str) -> dict[str, Any] | None:
         """Mark the active transcript session as inactive when the call ends."""
         clean_call_sid = str(call_sid).strip()
-        if (
-            not clean_call_sid
-            or clean_call_sid != self._active_call_sid
-            or not self._transcript_session_open
-        ):
+        if not clean_call_sid:
             return None
-
-        self._transcript_session_open = False
-        if not self._transcript_store.has_messages():
+        if not self._transcript_agent.end_call(clean_call_sid):
             return None
-
-        self._transcript_store.reset()
         return self.publish(
             "state",
             {
@@ -122,21 +108,6 @@ class DashboardEventBus:
                 "call_sid": clean_call_sid,
                 "reason": "call_ended",
             },
-        )
-
-    def _should_ingest_transcript_event(self, payload: dict[str, Any]) -> bool:
-        event_name = str(payload.get("event") or "").strip()
-        if event_name not in {"call_transcript_updated", "call_transcript_committed"}:
-            return True
-
-        if self._active_call_sid is None:
-            return True
-
-        call_sid = str(payload.get("call_sid") or "").strip()
-        return (
-            bool(call_sid)
-            and call_sid == self._active_call_sid
-            and self._transcript_session_open
         )
 
 

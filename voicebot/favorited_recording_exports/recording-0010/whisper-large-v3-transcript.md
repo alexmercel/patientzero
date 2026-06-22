@@ -1,0 +1,92 @@
+# Whisper Large-v3 Transcript - recording-0010
+
+- Recording: recording-0010.mp3
+- Model: Systran/faster-whisper-large-v3
+- Runtime: faster-whisper / CTranslate2
+- Device: CPU
+- Compute type: int8
+- Decode: beam_size=1, best_of=1, vad_filter=True, condition_on_previous_text=False
+- Language: en
+- Language probability: 0.9965291619300842
+- Duration seconds: 337.8155625
+- Generated: 2026-06-22T00:28:48.045423+00:00
+
+## Full Transcript
+
+You have a trial account. You can remove this message at any time. Thanks for calling Pivot Point Orthopedics. Would you like to create a demo patient profile? I just need your first and last name. My name is Maya Chen. I'm calling because I'm a new patient, and I was trying to schedule my first appointment. Your patient profile has been created successfully for demo purposes, and I have your date of birth as 74200. How may I help you today? My name is Maya Chen. I'm calling about my appointment. Tuesday works. Let me check your appointment options. Tuesday works for you. I can help with that. What would you like to do with your appointment? Book, reschedule, or cancel? Actually, Thursday. I can help with that. Are you wanting to book a new appointment, reschedule one, or cancel one? No, next Tuesday. Sure. What would you like to do with the appointment, book, reschedule, or cancel? I want to reschedule it, please, for next Tuesday. One moment. I'm checking your upcoming appointments. You have two upcoming appointments. One is Monday, June 22nd at 9 a.m. with Dr. Zbigniew Lukowski. The other is Tuesday, June 23rd at 3 p.m. with Judy Hauser. Which one would you like to reschedule? Oh, okay. I need to reschedule the one with Dr. Laskowski, the one on Monday. Can I move that to next Tuesday, please? I can check that. One moment. We have an opening Tuesday, June 23rd at 10 a.m. at the Nashville location. Would you like that one, or would you prefer Wednesday morning? Oh, I meant to say Thursday, actually. Is there anything available on Thursday instead? I'll look for Thursday opening. Okay. Is there anything? It looks like Thursday has openings at 9 a.m., 9.30 a.m., and 2 p.m. at the Nashville location. Which one works best for you? Actually, I was thinking about next Tuesday. Is there anything available then? I'll check next Tuesday again. Yes. Next Tuesday has openings at the Nashville location. The first one is Tuesday, June 30th at 9.30 a.m. There's also 2 p.m. that day and 9.30 a.m. on July 7th. Would any of those work for you? Oh, next Tuesday, June 30th at 2 p.m. would be perfect. Is that at the Nashville location? I just want to make sure I have the right address. Yes, that one is at the Nashville location. Before I reschedule it, I need to confirm the new visit details. Tuesday, June 30th at 2 p.m. with Dr. Zbigniew Lukoski at Nashville. Also, please have your photo ID and insurance card ready. Is that the appointment you want me to move it to? Yes, that's correct. And just to make sure I have everything right, can you tell me the address for the Nashville location? I can confirm the location name, but I can't provide the full address right now. The appointment is at Nashville. If you want, I can go ahead and reschedule it now. Oh, okay, that's fine. Could you just tell me the city it's in, then? I just want to make sure I'm going to the right place. It's in Nashville. If you want, I can finish rescheduling it now. Oh, Nashville? I don't think that's right. I was hoping to see someone in Walnut Creek, actually. Is there anything available there instead? I'll check Walnut Creek openings for you. oh thanks and closer to walnut creek is there anything available there soon i'm not seeing walnut creek options from here right now the openings i do have are at nashville if you want i can keep looking for a different day or help you with the nashville slot oh nashville again i'm not really sure why it keeps showing up i was really hoping for something closer to walnut Creek. Is there any way you could check if there are other places closer to there? I'm sorry about that. I can keep checking for a closer option. Oh. I see you to a representative. Please wait. Hello. You've reached the Pretty Good AI test line. Goodbye.
+
+## Timestamped Segments
+
+- [00:00:00.000 - 00:00:01.220] You have a trial account.
+- [00:00:01.760 - 00:00:03.920] You can remove this message at any time.
+- [00:00:20.430 - 00:00:22.730] Thanks for calling Pivot Point Orthopedics.
+- [00:00:23.090 - 00:00:25.230] Would you like to create a demo patient profile?
+- [00:00:25.970 - 00:00:27.230] I just need your first and last name.
+- [00:00:29.260 - 00:00:30.700] My name is Maya Chen.
+- [00:00:32.140 - 00:00:34.160] I'm calling because I'm a new patient,
+- [00:00:34.160 - 00:00:36.420] and I was trying to schedule my first appointment.
+- [00:00:36.420 - 00:00:39.820] Your patient profile has been created successfully for demo purposes,
+- [00:00:40.220 - 00:00:43.900] and I have your date of birth as 74200.
+- [00:00:45.200 - 00:00:46.340] How may I help you today?
+- [00:00:47.600 - 00:00:49.240] My name is Maya Chen.
+- [00:00:49.640 - 00:00:51.200] I'm calling about my appointment.
+- [00:00:52.120 - 00:00:52.900] Tuesday works.
+- [00:00:53.440 - 00:00:57.810] Let me check your appointment options.
+- [00:00:58.230 - 00:00:59.430] Tuesday works for you.
+- [00:00:59.710 - 00:01:00.870] I can help with that.
+- [00:01:00.870 - 00:01:02.850] What would you like to do with your appointment?
+- [00:01:03.450 - 00:01:05.350] Book, reschedule, or cancel?
+- [00:01:07.760 - 00:01:08.920] Actually, Thursday.
+- [00:01:13.950 - 00:01:15.130] I can help with that.
+- [00:01:15.530 - 00:01:19.350] Are you wanting to book a new appointment, reschedule one, or cancel one?
+- [00:01:20.790 - 00:01:22.510] No, next Tuesday.
+- [00:01:25.280 - 00:01:30.160] Sure. What would you like to do with the appointment, book, reschedule, or cancel?
+- [00:01:31.580 - 00:01:35.100] I want to reschedule it, please, for next Tuesday.
+- [00:01:45.180 - 00:01:47.300] One moment. I'm checking your upcoming appointments.
+- [00:01:50.270 - 00:01:51.950] You have two upcoming appointments.
+- [00:01:52.130 - 00:01:59.190] One is Monday, June 22nd at 9 a.m. with Dr. Zbigniew Lukowski.
+- [00:01:59.670 - 00:02:04.250] The other is Tuesday, June 23rd at 3 p.m. with Judy Hauser.
+- [00:02:04.790 - 00:02:06.350] Which one would you like to reschedule?
+- [00:02:06.930 - 00:02:16.450] Oh, okay. I need to reschedule the one with Dr. Laskowski, the one on Monday. Can I move that to next Tuesday, please?
+- [00:02:19.720 - 00:02:21.440] I can check that. One moment.
+- [00:02:22.840 - 00:02:30.940] We have an opening Tuesday, June 23rd at 10 a.m. at the Nashville location. Would you like that one, or would you prefer Wednesday morning?
+- [00:02:32.860 - 00:02:38.460] Oh, I meant to say Thursday, actually. Is there anything available on Thursday instead?
+- [00:02:41.830 - 00:02:43.490] I'll look for Thursday opening.
+- [00:02:45.090 - 00:02:45.350] Okay.
+- [00:02:45.470 - 00:02:45.890] Is there anything?
+- [00:02:46.170 - 00:02:57.660] It looks like Thursday has openings at 9 a.m., 9.30 a.m., and 2 p.m. at the Nashville location.
+- [00:02:58.260 - 00:02:59.380] Which one works best for you?
+- [00:03:00.840 - 00:03:03.240] Actually, I was thinking about next Tuesday.
+- [00:03:03.720 - 00:03:05.460] Is there anything available then?
+- [00:03:07.840 - 00:03:09.520] I'll check next Tuesday again.
+- [00:03:10.900 - 00:03:11.380] Yes.
+- [00:03:11.380 - 00:03:14.560] Next Tuesday has openings at the Nashville location.
+- [00:03:14.560 - 00:03:19.380] The first one is Tuesday, June 30th at 9.30 a.m.
+- [00:03:19.800 - 00:03:24.540] There's also 2 p.m. that day and 9.30 a.m. on July 7th.
+- [00:03:24.540 - 00:03:26.140] Would any of those work for you?
+- [00:03:28.400 - 00:03:31.760] Oh, next Tuesday, June 30th at 2 p.m. would be perfect.
+- [00:03:32.220 - 00:03:33.640] Is that at the Nashville location?
+- [00:03:34.200 - 00:03:35.960] I just want to make sure I have the right address.
+- [00:03:39.710 - 00:03:41.810] Yes, that one is at the Nashville location.
+- [00:03:42.390 - 00:03:45.310] Before I reschedule it, I need to confirm the new visit details.
+- [00:03:45.910 - 00:03:50.690] Tuesday, June 30th at 2 p.m. with Dr. Zbigniew Lukoski at Nashville.
+- [00:03:51.170 - 00:03:54.230] Also, please have your photo ID and insurance card ready.
+- [00:03:54.830 - 00:03:56.570] Is that the appointment you want me to move it to?
+- [00:03:58.700 - 00:03:59.920] Yes, that's correct.
+- [00:04:00.380 - 00:04:04.680] And just to make sure I have everything right, can you tell me the address for the Nashville location?
+- [00:04:05.220 - 00:04:11.360] I can confirm the location name, but I can't provide the full address right now.
+- [00:04:11.360 - 00:04:13.960] The appointment is at Nashville.
+- [00:04:14.520 - 00:04:16.780] If you want, I can go ahead and reschedule it now.
+- [00:04:16.780 - 00:04:25.120] Oh, okay, that's fine. Could you just tell me the city it's in, then? I just want to make sure I'm going to the right place.
+- [00:04:28.350 - 00:04:32.110] It's in Nashville. If you want, I can finish rescheduling it now.
+- [00:04:33.590 - 00:04:42.130] Oh, Nashville? I don't think that's right. I was hoping to see someone in Walnut Creek, actually. Is there anything available there instead?
+- [00:04:45.350 - 00:04:47.910] I'll check Walnut Creek openings for you.
+- [00:04:47.910 - 00:04:58.280] oh thanks and closer to walnut creek is there anything available there soon i'm not seeing
+- [00:04:58.280 - 00:05:03.420] walnut creek options from here right now the openings i do have are at nashville if you want
+- [00:05:03.420 - 00:05:10.720] i can keep looking for a different day or help you with the nashville slot oh nashville again
+- [00:05:10.720 - 00:05:16.560] i'm not really sure why it keeps showing up i was really hoping for something closer to walnut
+- [00:05:16.560 - 00:05:21.340] Creek. Is there any way you could check if there are other places closer to there?
+- [00:05:24.900 - 00:05:28.260] I'm sorry about that. I can keep checking for a closer option.
+- [00:05:29.660 - 00:05:30.060] Oh.
+- [00:05:30.340 - 00:05:32.460] I see you to a representative. Please wait.
+- [00:05:33.820 - 00:05:37.360] Hello. You've reached the Pretty Good AI test line. Goodbye.

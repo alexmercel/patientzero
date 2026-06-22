@@ -6,6 +6,13 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 
+from voicebot.src.agents.call_session_agent import CallSessionAgent
+from voicebot.src.agents.campaign_agents import CampaignSelectorAgent, ScenarioOrchestratorAgent
+from voicebot.src.agents.dashboard_agent import DashboardAgent
+from voicebot.src.agents.deep_analysis_agent import DeepAnalysisAgent
+from voicebot.src.agents.recording_agent import RecordingAgent
+from voicebot.src.agents.runtime import AgentRuntime
+from voicebot.src.agents.transcript_agent import TranscriptAgent
 from voicebot.src.api.dashboard_routes import build_dashboard_router
 from voicebot.src.api.websocket_routes import build_router
 from voicebot.src.config.settings import Settings, get_settings
@@ -29,7 +36,9 @@ def create_app(
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     app_settings = settings or get_settings()
-    event_bus = DashboardEventBus()
+    transcript_agent = TranscriptAgent()
+    event_bus = DashboardEventBus(transcript_agent=transcript_agent)
+    agent_runtime = AgentRuntime(dashboard_event_bus=event_bus)
     connection_registry = ConnectionRegistry()
     app_settings.ensure_directories()
     configure_logging(
@@ -58,16 +67,32 @@ def create_app(
     else:
         app_call_manager = call_manager
     app_recording_manager = recording_manager or RecordingManager(app_settings)
+    dashboard_agent = DashboardAgent()
+    campaign_selector_agent = CampaignSelectorAgent(test_campaign_manager)
+    scenario_orchestrator_agent = ScenarioOrchestratorAgent(test_campaign_manager)
+    call_session_agent = CallSessionAgent(app_call_manager)
+    recording_agent = RecordingAgent(app_recording_manager)
+    deep_analysis_agent = DeepAnalysisAgent(app_deep_analysis_service)
+    for agent in (
+        transcript_agent,
+        call_session_agent,
+        campaign_selector_agent,
+        scenario_orchestrator_agent,
+        recording_agent,
+        deep_analysis_agent,
+        dashboard_agent,
+    ):
+        agent_runtime.register(agent)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
         logger.info("server_starting", host=app_settings.app_host, port=app_settings.app_port)
+        await agent_runtime.start()
         try:
             yield
         finally:
             await connection_registry.close_all()
-            if app_deep_analysis_service is not None:
-                await app_deep_analysis_service.close()
+            await agent_runtime.stop()
             await app_recording_manager.close()
             logger.info("server_stopping")
 
@@ -80,6 +105,10 @@ def create_app(
             app_recording_manager,
             test_campaign_manager,
             connection_registry=connection_registry,
+            agent_runtime=agent_runtime,
+            dashboard_agent=dashboard_agent,
+            campaign_selector_agent=campaign_selector_agent,
+            scenario_orchestrator_agent=scenario_orchestrator_agent,
         )
     )
     app.include_router(

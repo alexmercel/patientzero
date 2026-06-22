@@ -8,8 +8,15 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
+from voicebot.src.agents.campaign_agents import CampaignSelectorAgent, ScenarioOrchestratorAgent
+from voicebot.src.agents.dashboard_agent import DashboardAgent
+from voicebot.src.agents.runtime import AgentRuntime
 from voicebot.src.config.settings import Settings
-from voicebot.src.models.api_models import RecordingFavoriteRequest, StartTestCallRequest
+from voicebot.src.models.api_models import (
+    RecordingFavoriteRequest,
+    ScenarioTransitionRequest,
+    StartTestCallRequest,
+)
 from voicebot.src.observability.event_bus import DashboardEventBus
 from voicebot.src.runtime.connection_registry import ConnectionRegistry
 from voicebot.src.telephony.call_manager import CallManager
@@ -18,6 +25,7 @@ from voicebot.src.testing.campaign_manager import TestCampaignManager
 from voicebot.src.utils.logging import get_logger
 
 logger = get_logger(__name__)
+_LANDING_HTML_PATH = Path(__file__).with_name("landing.html")
 _DASHBOARD_HTML_PATH = Path(__file__).with_name("dashboard.html")
 _DASHBOARD_CSS_PATH = Path(__file__).with_name("dashboard.css")
 _DASHBOARD_JS_PATH = Path(__file__).with_name("dashboard.js")
@@ -30,12 +38,23 @@ def build_dashboard_router(
     recording_manager: RecordingManager,
     test_campaign_manager: TestCampaignManager,
     connection_registry: ConnectionRegistry | None = None,
+    agent_runtime: AgentRuntime | None = None,
+    dashboard_agent: DashboardAgent | None = None,
+    campaign_selector_agent: CampaignSelectorAgent | None = None,
+    scenario_orchestrator_agent: ScenarioOrchestratorAgent | None = None,
 ) -> APIRouter:
     """Create routes for the local operator dashboard."""
     router = APIRouter()
     registry = connection_registry or ConnectionRegistry()
+    dashboard_snapshots = dashboard_agent or DashboardAgent()
+    campaign_selector = campaign_selector_agent or CampaignSelectorAgent(test_campaign_manager)
+    scenario_orchestrator = scenario_orchestrator_agent or ScenarioOrchestratorAgent(test_campaign_manager)
 
     @router.get("/", response_class=HTMLResponse)
+    async def landing() -> HTMLResponse:
+        return HTMLResponse(_LANDING_HTML_PATH.read_text(encoding="utf-8"))
+
+    @router.get("/dashboard", response_class=HTMLResponse)
     async def dashboard() -> HTMLResponse:
         return HTMLResponse(_DASHBOARD_HTML_PATH.read_text(encoding="utf-8"))
 
@@ -49,23 +68,21 @@ def build_dashboard_router(
 
     @router.get("/api/dashboard/snapshot")
     async def dashboard_snapshot() -> JSONResponse:
-        active_calls = [session.model_dump(mode="json") for session in call_manager.list_calls(active_only=True)]
-        recent_calls = [session.model_dump(mode="json") for session in call_manager.list_calls(active_only=False)]
-        recordings = [recording.model_dump(mode="json") for recording in recording_manager.list_recordings()]
-        payload = {
-            "app": {
-                "public_base_url": settings.public_base_url,
-                "stream_url": _safe_url(settings),
-                "active_call_count": len(call_manager.active_calls),
-            },
-            "events": event_bus.recent(limit=200),
-            "transcript_messages": event_bus.transcript_messages(),
-            "active_calls": active_calls,
-            "recent_calls": recent_calls[:12],
-            "recordings": recordings,
-            "testing": test_campaign_manager.report_snapshot(recordings=recordings),
-        }
-        return JSONResponse(payload)
+        return JSONResponse(
+            dashboard_snapshots.snapshot(
+                settings=settings,
+                call_manager=call_manager,
+                event_bus=event_bus,
+                recording_manager=recording_manager,
+                test_campaign_manager=test_campaign_manager,
+            )
+        )
+
+    @router.get("/api/agents")
+    async def agent_status() -> JSONResponse:
+        if agent_runtime is None:
+            return JSONResponse({"started": False, "agent_count": 0, "agents": []})
+        return JSONResponse(agent_runtime.status())
 
     @router.get("/api/testing/report")
     async def testing_report() -> JSONResponse:
@@ -74,11 +91,11 @@ def build_dashboard_router(
 
     @router.get("/api/testing/next-call")
     async def testing_next_call() -> JSONResponse:
-        return JSONResponse(test_campaign_manager.preview_next_call().model_dump(mode="json"))
+        return JSONResponse(campaign_selector.preview_next_call().model_dump(mode="json"))
 
     @router.post("/api/testing/reset")
     async def reset_testing_report() -> JSONResponse:
-        test_campaign_manager.reset_campaign()
+        campaign_selector.reset_campaign()
         recordings = [recording.model_dump(mode="json") for recording in recording_manager.list_recordings()]
         return JSONResponse(
             {
@@ -89,11 +106,11 @@ def build_dashboard_router(
 
     @router.get("/api/testing/personas")
     async def list_testing_personas() -> JSONResponse:
-        return JSONResponse(test_campaign_manager.list_personas())
+        return JSONResponse(campaign_selector.list_personas())
 
     @router.get("/api/testing/scenarios")
     async def list_testing_scenarios() -> JSONResponse:
-        return JSONResponse(test_campaign_manager.list_scenarios())
+        return JSONResponse(campaign_selector.list_scenarios())
 
     @router.post("/api/testing/start-call")
     async def start_testing_call(
@@ -101,7 +118,7 @@ def build_dashboard_router(
     ) -> JSONResponse:
         persona_id = request.persona_id if request else None
         scenario_ids = request.scenario_ids if request else None
-        run, custom_parameters = test_campaign_manager.plan_next_call(
+        run, custom_parameters = campaign_selector.plan_next_call(
             persona_id=persona_id,
             scenario_ids=scenario_ids,
         )
@@ -125,6 +142,52 @@ def build_dashboard_router(
                         else None
                     )
                 ),
+            }
+        )
+
+    @router.post("/api/testing/active-runs/{call_sid}/scenario-transition")
+    async def transition_active_scenario(
+        call_sid: str,
+        request: ScenarioTransitionRequest,
+    ) -> JSONResponse:
+        try:
+            transition = scenario_orchestrator.transition_scenario(
+                call_sid=call_sid,
+                mode=request.mode,
+                target_scenario_id=request.target_scenario_id,
+                reason=request.reason,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        nudge = transition.get("transition_nudge")
+        bridge = await registry.bridge_for_call(call_sid)
+        transition_queued = False
+        if bridge is not None and nudge and hasattr(bridge, "queue_transition_nudge"):
+            transition_queued = bool(bridge.queue_transition_nudge(nudge))
+
+        event_bus.publish(
+            "state",
+            {
+                "event": "testing_scenario_transition_queued",
+                "call_sid": call_sid,
+                "run_id": transition.get("run", {}).get("run_id"),
+                "mode": transition.get("mode"),
+                "target_scenario_id": transition.get("target_scenario_id"),
+                "transition_queued": transition_queued,
+            },
+        )
+        return JSONResponse(
+            {
+                "ok": True,
+                "call_sid": call_sid,
+                "run_id": transition.get("run", {}).get("run_id"),
+                "current_scenario": transition.get("current_scenario"),
+                "transition_status": "queued" if transition_queued else "state_updated",
+                "transition_queued": transition_queued,
+                "transition_nudge": nudge,
+                "mode": transition.get("mode"),
+                "target_scenario_id": transition.get("target_scenario_id"),
             }
         )
 
